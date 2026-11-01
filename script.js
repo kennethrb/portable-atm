@@ -43,6 +43,7 @@ function updateFeeCalculator() {
         feeLabel.innerText = "₱5.00";
         totalCollect.innerText = '₱5.00';
     } else {
+        // Cash Reload and Settlement Received do not charge customer convenience fees
         calcBox.classList.add('hidden');
     }
 }
@@ -51,20 +52,23 @@ function toggleFields() {
     const type = document.getElementById('type').value;
     const denomTitle = document.getElementById('denomTitle');
     const quickPills = document.getElementById('quickAmountContainer');
+    const denomSection = document.getElementById('denomSection');
     
     if (type === 'Cash Reload') {
+        denomSection.classList.remove('hidden');
         denomTitle.innerText = "Bills Added (IN)";
         denomTitle.className = "text-xs font-semibold text-emerald-400 uppercase tracking-wider";
         quickPills.classList.remove('hidden');
         calculateSuggestedDenominations();
     } else if (type === 'Withdrawal') {
+        denomSection.classList.remove('hidden');
         denomTitle.innerText = "Bills Dispensed (OUT)";
         denomTitle.className = "text-xs font-semibold text-amber-400 uppercase tracking-wider";
         quickPills.classList.remove('hidden');
         calculateSuggestedDenominations();
     } else {
-        denomTitle.innerText = "No Bills (Balance Inquiry)";
-        denomTitle.className = "text-xs font-semibold text-slate-400 uppercase tracking-wider";
+        // Balance Inquiry and Settlement Received do not use bill tray inputs
+        denomSection.classList.add('hidden');
         quickPills.classList.add('hidden');
         document.getElementById('suggestionBox').classList.add('hidden');
     }

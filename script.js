@@ -77,14 +77,22 @@ function toggleFields() {
 
 async function fetchDashboardMetrics() {
     try {
+        console.log("🔍 Fetching metrics from Google Apps Script Backend...");
         const res = await fetch(SCRIPT_URL);
         const data = await res.json();
+        
+        console.log("📥 Raw Payload Received:", data);
+
         if (data.status === 'success') {
             const m = data.metrics;
             currentInventory.totalBalance = parseFloat(m.currentBalance) || 0;
             currentInventory.p100 = parseInt(m.b100Remaining) || 0;
             currentInventory.p500 = parseInt(m.b500Remaining) || 0;
             currentInventory.p1000 = parseInt(m.b1000Remaining) || 0;
+
+            console.log("📊 Parsed Balance:", currentInventory.totalBalance);
+            console.log("💰 Parsed Fees:", m.totalFees);
+            console.log("💵 Parsed Inventory (100|500|1000):", currentInventory.p100, currentInventory.p500, currentInventory.p1000);
 
             document.getElementById('dashBalance').innerText = '₱' + currentInventory.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 });
             document.getElementById('dashFees').innerText = '₱' + Number(m.totalFees).toLocaleString('en-US', { minimumFractionDigits: 2 });
@@ -95,13 +103,14 @@ async function fetchDashboardMetrics() {
 
             checkLowStockAlerts();
 
-            // Render Recent Transaction Feed
             if (data.recentHistory) {
                 renderRecentHistory(data.recentHistory);
             }
+        } else {
+            console.error("❌ Backend Error Status:", data.message);
         }
     } catch (err) {
-        console.error("Error fetching metrics:", err);
+        console.error("❌ Network / Fetch Error:", err);
     }
 }
 

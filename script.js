@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('date').valueAsDate = new Date();
     fetchDashboardMetrics();
 
-    // Listen to amount changes to trigger denomination suggestion for withdrawals
+    // Listen to input and dropdown changes to trigger smart denomination suggestions
     document.getElementById('amount').addEventListener('input', calculateSuggestedDenominations);
     document.getElementById('type').addEventListener('change', calculateSuggestedDenominations);
 });
@@ -16,20 +16,19 @@ document.addEventListener("DOMContentLoaded", () => {
 function toggleFields() {
     const type = document.getElementById('type').value;
     const denomTitle = document.getElementById('denomTitle');
-    const suggestionBox = document.getElementById('suggestionBox');
     
     if (type === 'Cash Reload') {
         denomTitle.innerText = "Bills Added (IN)";
-        denomTitle.className = "text-sm font-semibold text-emerald-400 uppercase tracking-wider";
-        suggestionBox.classList.add('hidden');
+        denomTitle.className = "text-xs font-semibold text-emerald-400 uppercase tracking-wider";
+        calculateSuggestedDenominations();
     } else if (type === 'Withdrawal') {
         denomTitle.innerText = "Bills Dispensed (OUT)";
-        denomTitle.className = "text-sm font-semibold text-amber-400 uppercase tracking-wider";
+        denomTitle.className = "text-xs font-semibold text-amber-400 uppercase tracking-wider";
         calculateSuggestedDenominations();
     } else {
         denomTitle.innerText = "No Bills (Balance Inquiry)";
-        denomTitle.className = "text-sm font-semibold text-slate-400 uppercase tracking-wider";
-        suggestionBox.classList.add('hidden');
+        denomTitle.className = "text-xs font-semibold text-slate-400 uppercase tracking-wider";
+        document.getElementById('suggestionBox').classList.add('hidden');
     }
 }
 
@@ -39,10 +38,10 @@ async function fetchDashboardMetrics() {
         const data = await res.json();
         if (data.status === 'success') {
             const m = data.metrics;
-            document.getElementById('dashBalance').innerText = '₱' + Number(m.currentBalance).toLocaleString();
-            document.getElementById('dashFees').innerText = '₱' + Number(m.totalFees).toLocaleString();
+            document.getElementById('dashBalance').innerText = '₱' + Number(m.currentBalance).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('dashFees').innerText = '₱' + Number(m.totalFees).toLocaleString('en-US', { minimumFractionDigits: 2 });
             
-            // Save inventory for calculation
+            // Save inventory for withdrawal calculation
             currentInventory.p100 = parseInt(m.b100Remaining) || 0;
             currentInventory.p500 = parseInt(m.b500Remaining) || 0;
             currentInventory.p1000 = parseInt(m.b1000Remaining) || 0;
@@ -56,12 +55,12 @@ async function fetchDashboardMetrics() {
     }
 }
 
-// 💡 Smart Denomination Suggestion Logic
+// 💡 Smart Denomination Suggestion Logic (Handles both Withdrawal & Cash Reload)
 function calculateSuggestedDenominations() {
     const type = document.getElementById('type').value;
     const suggestionBox = document.getElementById('suggestionBox');
     
-    if (type !== 'Withdrawal') {
+    if (type === 'Balance Inquiry') {
         suggestionBox.classList.add('hidden');
         return;
     }
@@ -72,40 +71,55 @@ function calculateSuggestedDenominations() {
         return;
     }
 
-    // Clone current stock so we don't mutate global state during calculation
-    let stock1000 = currentInventory.p1000;
-    let stock500 = currentInventory.p500;
-    let stock100 = currentInventory.p100;
-
     let needed1000 = 0, needed500 = 0, needed100 = 0;
     let remaining = targetAmount;
 
-    // 1. Take 1000s first
-    if (remaining >= 1000 && stock1000 > 0) {
-        needed1000 = Math.floor(remaining / 1000);
-        if (needed1000 > stock1000) needed1000 = stock1000;
-        remaining -= needed1000 * 1000;
-    }
+    if (type === 'Withdrawal') {
+        // --- Withdrawal Logic (Tray Inventory Constraint) ---
+        let stock1000 = currentInventory.p1000;
+        let stock500 = currentInventory.p500;
+        let stock100 = currentInventory.p100;
 
-    // 2. Take 500s next
-    if (remaining >= 500 && stock500 > 0) {
-        needed500 = Math.floor(remaining / 500);
-        if (needed500 > stock500) needed500 = stock500;
-        remaining -= needed500 * 500;
-    }
+        if (remaining >= 1000 && stock1000 > 0) {
+            needed1000 = Math.floor(remaining / 1000);
+            if (needed1000 > stock1000) needed1000 = stock1000;
+            remaining -= needed1000 * 1000;
+        }
 
-    // 3. Take 100s last
-    if (remaining >= 100 && stock100 > 0) {
-        needed100 = Math.floor(remaining / 100);
-        if (needed100 > stock100) needed100 = stock100;
-        remaining -= needed100 * 100;
+        if (remaining >= 500 && stock500 > 0) {
+            needed500 = Math.floor(remaining / 500);
+            if (needed500 > stock500) needed500 = stock500;
+            remaining -= needed500 * 500;
+        }
+
+        if (remaining >= 100 && stock100 > 0) {
+            needed100 = Math.floor(remaining / 100);
+            if (needed100 > stock100) needed100 = stock100;
+            remaining -= needed100 * 100;
+        }
+    } else if (type === 'Cash Reload') {
+        // --- Cash Reload Logic (Optimal Denomination Breakdown) ---
+        if (remaining >= 1000) {
+            needed1000 = Math.floor(remaining / 1000);
+            remaining -= needed1000 * 1000;
+        }
+
+        if (remaining >= 500) {
+            needed500 = Math.floor(remaining / 500);
+            remaining -= needed500 * 500;
+        }
+
+        if (remaining >= 100) {
+            needed100 = Math.floor(remaining / 100);
+            remaining -= needed100 * 100;
+        }
     }
 
     const suggestionText = document.getElementById('suggestionText');
     const applyBtn = document.getElementById('applySuggestionBtn');
 
     if (remaining === 0 && (needed1000 > 0 || needed500 > 0 || needed100 > 0)) {
-        suggestionText.innerHTML = `💡 <b>Suggested:</b> ₱1000 x ${needed1000} | ₱500 x ${needed500} | ₱100 x ${needed100}`;
+        suggestionText.innerHTML = `💡 <b>Suggested Reload:</b> ₱1,000 × ${needed1000} | ₱500 × ${needed500} | ₱100 × ${needed100}`;
         suggestionBox.classList.remove('hidden');
 
         // Attach action to apply button
@@ -116,7 +130,7 @@ function calculateSuggestedDenominations() {
             suggestionBox.classList.add('hidden');
         };
     } else {
-        suggestionText.innerHTML = `⚠️ Cannot exact-match amount with available tray inventory (short by ₱${remaining})`;
+        suggestionText.innerHTML = `⚠️ Amount must be a multiple of ₱100 (remainder: ₱${remaining})`;
         applyBtn.onclick = null;
         suggestionBox.classList.remove('hidden');
     }
@@ -161,7 +175,7 @@ document.getElementById('atmForm').addEventListener('submit', async function(e) 
         });
 
         status.innerText = "✅ Transaction successfully recorded!";
-        status.className = "mt-4 text-center text-sm text-emerald-400 font-semibold";
+        status.className = "mt-4 text-center text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 p-3 rounded-xl";
         status.classList.remove('hidden');
         document.getElementById('atmForm').reset();
         document.getElementById('date').valueAsDate = new Date();
@@ -170,10 +184,10 @@ document.getElementById('atmForm').addEventListener('submit', async function(e) 
         setTimeout(fetchDashboardMetrics, 1500);
     } catch (err) {
         status.innerText = "❌ Error submitting transaction. Please try again.";
-        status.className = "mt-4 text-center text-sm text-rose-400 font-semibold";
+        status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl";
         status.classList.remove('hidden');
     } finally {
         btn.disabled = false;
-        btn.innerText = "Submit Transaction";
+        btn.innerText = "Authorize Transaction";
     }
 });

@@ -52,27 +52,40 @@
                 </div>
             </div>
 
-            <!-- Settlement & Daily Earnings Grid -->
-            <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800/80">
-                <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800">
-                    <span class="text-[10px] text-slate-400 font-medium block">Pending Settlement</span>
-                    <span id="dashPendingSettlement" class="text-sm font-bold text-sky-400">₱0.00</span>
+            <!-- Required 3 Operational Business Metrics Cards -->
+            <div class="grid grid-cols-1 gap-3 pt-3 border-t border-slate-800/80">
+                
+                <!-- Card 1: Today's Withdrawals -->
+                <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                    <div>
+                        <span class="text-[11px] text-slate-400 uppercase font-semibold tracking-wider block">Today's Withdrawals</span>
+                        <span id="dashTodayWithdrawals" class="text-lg font-extrabold text-white">₱0.00</span>
+                    </div>
+                    <span class="text-xs text-slate-500 font-mono">Volume Processed</span>
                 </div>
-                <div class="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800">
-                    <span class="text-[10px] text-slate-400 font-medium block">Today's Earnings</span>
-                    <span id="dashTodayFees" class="text-sm font-bold text-emerald-400">₱0.00</span>
-                </div>
-            </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <span class="text-[11px] text-slate-400 font-medium block">Today's Withdrawals</span>
-                    <span id="dashTodayWithdrawals" class="text-xs font-semibold text-slate-200 block mt-0.5">₱0.00</span>
+                <!-- Card 2: Pending Settlement -->
+                <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                    <div>
+                        <span class="text-[11px] text-slate-400 uppercase font-semibold tracking-wider block">Pending Settlement</span>
+                        <span id="dashPendingSettlement" class="text-lg font-extrabold text-sky-400">₱0.00</span>
+                        <span class="text-[10px] text-slate-500 block mt-0.5">Expected: Next Banking Day (BDO) or T+2</span>
+                    </div>
+                    <div id="settlementStatusIndicator" class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+                        No Pending
+                    </div>
                 </div>
-                <div>
-                    <span class="text-[11px] text-slate-400 font-medium block">This Month's Revenue</span>
-                    <span id="dashMonthFees" class="text-xs font-semibold text-amber-400 block mt-0.5">₱0.00</span>
+
+                <!-- Card 3: Commission Receivable -->
+                <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                    <div>
+                        <span class="text-[11px] text-slate-400 uppercase font-semibold tracking-wider block">Commission Receivable</span>
+                        <span id="dashCommissionReceivable" class="text-lg font-extrabold text-amber-400">₱0.00</span>
+                        <span class="text-[10px] text-slate-500 block mt-0.5">Expected Payout: On or Before 15th of Next Month</span>
+                    </div>
+                    <span class="text-xs text-amber-500/80 font-mono">Monthly Accrual</span>
                 </div>
+
             </div>
 
             <!-- Denomination Inventory Matrix -->
@@ -214,7 +227,7 @@
 
     <!-- Footer -->
     <footer class="text-center text-slate-500 text-xs mt-8">
-        VaultLink Terminal v3.5 • Connected to Secure Google Sheet DB
+        VaultLink Terminal v4.0 • Connected to Secure Google Sheet DB
     </footer>
 
     <!-- External JavaScript link -->

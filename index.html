@@ -7,6 +7,7 @@
     <!-- PWA & Mobile Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#07090e">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://img.icons8.com/emoji/192/atm-sign-emoji.png">
@@ -52,7 +53,7 @@
                 </div>
             </div>
 
-            <!-- Required 3 Operational Business Metrics Cards -->
+            <!-- Required Operational Business Metrics Cards -->
             <div class="grid grid-cols-1 gap-3 pt-3 border-t border-slate-800/80">
                 
                 <!-- Card 1: Today's Withdrawals -->
@@ -81,9 +82,10 @@
                     <div>
                         <span class="text-[11px] text-slate-400 uppercase font-semibold tracking-wider block">Commission Receivable</span>
                         <span id="dashCommissionReceivable" class="text-lg font-extrabold text-amber-400">₱0.00</span>
-                        <span class="text-[10px] text-slate-500 block mt-0.5">Expected Payout: On or Before 15th of Next Month</span>
+                        <span id="dashCommissionCoverage" class="text-[10px] text-slate-400 block mt-0.5">Coverage: Previous Month</span>
+                        <span id="dashCommissionPayBy" class="text-[10px] text-slate-500 block">Expected Payout: 15th of Current Month</span>
                     </div>
-                    <span class="text-xs text-amber-500/80 font-mono">Monthly Accrual</span>
+                    <span class="text-xs text-amber-500/80 font-mono">Accrued</span>
                 </div>
 
             </div>

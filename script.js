@@ -1,24 +1,35 @@
 // Replace this with your actual Google Apps Script Web App URL
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-OAfp8qXmXQKIKpuMyOw2HEjoLg4OqmXBlFYYpujs92XWwE-8_Kdg51C_FSi3LvQwpA/exec";
 
-// Set today's date by default on load
+// Global variable to store live stock fetched from dashboard
+let currentInventory = { p100: 0, p500: 0, p1000: 0 };
+
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('date').valueAsDate = new Date();
     fetchDashboardMetrics();
+
+    // Listen to amount changes to trigger denomination suggestion for withdrawals
+    document.getElementById('amount').addEventListener('input', calculateSuggestedDenominations);
+    document.getElementById('type').addEventListener('change', calculateSuggestedDenominations);
 });
 
 function toggleFields() {
     const type = document.getElementById('type').value;
     const denomTitle = document.getElementById('denomTitle');
+    const suggestionBox = document.getElementById('suggestionBox');
+    
     if (type === 'Cash Reload') {
         denomTitle.innerText = "Bills Added (IN)";
         denomTitle.className = "text-sm font-semibold text-emerald-400 uppercase tracking-wider";
+        suggestionBox.classList.add('hidden');
     } else if (type === 'Withdrawal') {
         denomTitle.innerText = "Bills Dispensed (OUT)";
         denomTitle.className = "text-sm font-semibold text-amber-400 uppercase tracking-wider";
+        calculateSuggestedDenominations();
     } else {
         denomTitle.innerText = "No Bills (Balance Inquiry)";
         denomTitle.className = "text-sm font-semibold text-slate-400 uppercase tracking-wider";
+        suggestionBox.classList.add('hidden');
     }
 }
 
@@ -30,12 +41,84 @@ async function fetchDashboardMetrics() {
             const m = data.metrics;
             document.getElementById('dashBalance').innerText = '₱' + Number(m.currentBalance).toLocaleString();
             document.getElementById('dashFees').innerText = '₱' + Number(m.totalFees).toLocaleString();
-            document.getElementById('dash100').innerText = m.b100Remaining;
-            document.getElementById('dash500').innerText = m.b500Remaining;
-            document.getElementById('dash1000').innerText = m.b1000Remaining;
+            
+            // Save inventory for calculation
+            currentInventory.p100 = parseInt(m.b100Remaining) || 0;
+            currentInventory.p500 = parseInt(m.b500Remaining) || 0;
+            currentInventory.p1000 = parseInt(m.b1000Remaining) || 0;
+
+            document.getElementById('dash100').innerText = currentInventory.p100;
+            document.getElementById('dash500').innerText = currentInventory.p500;
+            document.getElementById('dash1000').innerText = currentInventory.p1000;
         }
     } catch (err) {
         console.error("Error fetching dashboard metrics:", err);
+    }
+}
+
+// 💡 Smart Denomination Suggestion Logic
+function calculateSuggestedDenominations() {
+    const type = document.getElementById('type').value;
+    const suggestionBox = document.getElementById('suggestionBox');
+    
+    if (type !== 'Withdrawal') {
+        suggestionBox.classList.add('hidden');
+        return;
+    }
+
+    let targetAmount = parseInt(document.getElementById('amount').value) || 0;
+    if (targetAmount <= 0) {
+        suggestionBox.classList.add('hidden');
+        return;
+    }
+
+    // Clone current stock so we don't mutate global state during calculation
+    let stock1000 = currentInventory.p1000;
+    let stock500 = currentInventory.p500;
+    let stock100 = currentInventory.p100;
+
+    let needed1000 = 0, needed500 = 0, needed100 = 0;
+    let remaining = targetAmount;
+
+    // 1. Take 1000s first
+    if (remaining >= 1000 && stock1000 > 0) {
+        needed1000 = Math.floor(remaining / 1000);
+        if (needed1000 > stock1000) needed1000 = stock1000;
+        remaining -= needed1000 * 1000;
+    }
+
+    // 2. Take 500s next
+    if (remaining >= 500 && stock500 > 0) {
+        needed500 = Math.floor(remaining / 500);
+        if (needed500 > stock500) needed500 = stock500;
+        remaining -= needed500 * 500;
+    }
+
+    // 3. Take 100s last
+    if (remaining >= 100 && stock100 > 0) {
+        needed100 = Math.floor(remaining / 100);
+        if (needed100 > stock100) needed100 = stock100;
+        remaining -= needed100 * 100;
+    }
+
+    const suggestionText = document.getElementById('suggestionText');
+    const applyBtn = document.getElementById('applySuggestionBtn');
+
+    if (remaining === 0 && (needed1000 > 0 || needed500 > 0 || needed100 > 0)) {
+        suggestionText.innerHTML = `💡 <b>Suggested:</b> ₱1000 x ${needed1000} | ₱500 x ${needed500} | ₱100 x ${needed100}`;
+        suggestionBox.classList.remove('hidden');
+
+        // Attach action to apply button
+        applyBtn.onclick = function() {
+            document.getElementById('b1000').value = needed1000;
+            document.getElementById('b500').value = needed500;
+            document.getElementById('b100').value = needed100;
+            suggestionBox.classList.add('hidden');
+        };
+    } else {
+        suggestionText.innerHTML = `⚠️ Cannot exact-match amount with available tray inventory (short by ₱${remaining})`;
+        applyBtn.onclick = null;
+        suggestionBox.classList.remove('hidden');
     }
 }
 
@@ -82,8 +165,8 @@ document.getElementById('atmForm').addEventListener('submit', async function(e) 
         status.classList.remove('hidden');
         document.getElementById('atmForm').reset();
         document.getElementById('date').valueAsDate = new Date();
+        document.getElementById('suggestionBox').classList.add('hidden');
         
-        // Refresh dashboard metrics after a brief delay to allow sheet sync
         setTimeout(fetchDashboardMetrics, 1500);
     } catch (err) {
         status.innerText = "❌ Error submitting transaction. Please try again.";

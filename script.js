@@ -83,10 +83,20 @@ async function fetchDashboardMetrics() {
             currentInventory.p1000 = parseInt(m.b1000Remaining) || 0;
 
             document.getElementById('dashBalance').innerText = '₱' + currentInventory.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('dashPendingSettlement').innerText = '₱' + Number(m.pendingSettlement || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('dashTodayFees').innerText = '₱' + Number(m.todayFees || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
             document.getElementById('dashTodayWithdrawals').innerText = '₱' + Number(m.todayWithdrawals || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('dashMonthFees').innerText = '₱' + Number(m.monthFees || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('dashPendingSettlement').innerText = '₱' + Number(m.pendingSettlement || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('dashCommissionReceivable').innerText = '₱' + Number(m.commissionReceivable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+            // Settlement Status Logic (Green if 0, Yellow if pending exists)
+            const settlementIndicator = document.getElementById('settlementStatusIndicator');
+            const pendingVal = parseFloat(m.pendingSettlement) || 0;
+            if (pendingVal > 0) {
+                settlementIndicator.className = "px-2 py-1 rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/20";
+                settlementIndicator.innerText = "Pending";
+            } else {
+                settlementIndicator.className = "px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20";
+                settlementIndicator.innerText = "No Pending";
+            }
 
             document.getElementById('dash100').innerText = currentInventory.p100;
             document.getElementById('dash500').innerText = currentInventory.p500;
@@ -262,7 +272,6 @@ document.getElementById('atmForm').addEventListener('submit', async function(e) 
     const type = document.getElementById('type').value;
     let rawAmount = parseFloat(document.getElementById('amount').value) || 0;
 
-    // Client-side BancNet ₱10,000 Maximum Withdrawal Policy Validation
     if (type === 'Withdrawal' && rawAmount > 10000) {
         status.innerText = "❌ Policy Violation: Maximum withdrawal per transaction is ₱10,000.";
         status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl";
@@ -295,7 +304,6 @@ document.getElementById('atmForm').addEventListener('submit', async function(e) 
     };
 
     try {
-        // Removed mode: 'no-cors' to properly verify true backend status response
         const res = await fetch(SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },

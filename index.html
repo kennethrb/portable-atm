@@ -44,10 +44,11 @@
 
             <div class="flex justify-between items-start">
                 <div>
-                    <span class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Available Cash Balance</span>
+                    <span class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Physical Cash Float</span>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Calculated from remaining bill inventory.</p>
                     <h2 id="dashBalance" class="text-3xl font-extrabold text-white mt-1 tracking-tight">₱0.00</h2>
                 </div>
-                <div class="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center space-x-1">
+                <div id="floatHealthIndicator" class="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center space-x-1">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span>Online</span>
                 </div>

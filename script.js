@@ -1,5 +1,5 @@
 // Replace this with your actual Google Apps Script Web App URL
-const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-OAfp8qXmXQKIKpuMyOw2HEjoLg4OqmXBlFYYpujs92XWwE-8_Kdg51C_FSi3LvQwpA/exec";
 
 // Set today's date by default on load
 document.addEventListener("DOMContentLoaded", () => {

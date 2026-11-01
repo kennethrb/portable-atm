@@ -43,7 +43,6 @@ function updateFeeCalculator() {
         feeLabel.innerText = "₱5.00";
         totalCollect.innerText = '₱5.00';
     } else {
-        // Cash Reload and Settlement Received do not charge customer convenience fees
         calcBox.classList.add('hidden');
     }
 }
@@ -67,7 +66,6 @@ function toggleFields() {
         quickPills.classList.remove('hidden');
         calculateSuggestedDenominations();
     } else {
-        // Balance Inquiry and Settlement Received do not use bill tray inputs
         denomSection.classList.add('hidden');
         quickPills.classList.add('hidden');
         document.getElementById('suggestionBox').classList.add('hidden');
@@ -89,9 +87,16 @@ async function fetchDashboardMetrics() {
             document.getElementById('dashBalance').innerText = '₱' + currentInventory.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 });
             document.getElementById('dashTodayWithdrawals').innerText = '₱' + Number(m.todayWithdrawals || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
             document.getElementById('dashPendingSettlement').innerText = '₱' + Number(m.pendingSettlement || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('dashCommissionReceivable').innerText = '₱' + Number(m.commissionReceivable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            
+            // Commission Accounting Logic Integration
+            document.getElementById('dashCommissionAwaiting').innerText = '₱' + Number(m.commissionAwaitingPayout || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('dashCommissionCoverage').innerText = `Coverage: ${m.previousMonthName || 'Previous Month'}`;
+            document.getElementById('dashCommissionPayBy').innerText = `Pay By: ${m.expectedPayoutDate || '15th of Current Month'}`;
 
-            // Settlement Status Logic (Green if 0, Yellow if pending exists)
+            document.getElementById('dashCurrentMonthCommission').innerText = '₱' + Number(m.currentMonthCommission || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('dashCurrentMonthCoverage').innerText = `Coverage: ${m.currentMonthName || 'Current Month'}`;
+            document.getElementById('dashCurrentMonthPayBy').innerText = `Pay By: ${m.nextMonthPayoutDate || '15th of Next Month'}`;
+
             const settlementIndicator = document.getElementById('settlementStatusIndicator');
             const pendingVal = parseFloat(m.pendingSettlement) || 0;
             if (pendingVal > 0) {

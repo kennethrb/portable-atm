@@ -1,1 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portable ATM Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6">
+    <div class="max-w-xl mx-auto bg-slate-800 rounded-xl shadow-xl p-6 border border-slate-700">
+        <h1 class="text-2xl font-bold mb-6 text-emerald-400 text-center">🏧 Portable ATM Transaction Form</h1>
+        
+        <form id="atmForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Transaction Type</label>
+                <select id="type" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white" onchange="toggleFields()">
+                    <option value="Withdrawal">Withdrawal</option>
+                    <option value="Cash Reload">Cash Reload</option>
+                    <option value="Balance Inquiry">Balance Inquiry</option>
+                </select>
+            </div>
 
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Date</label>
+                    <input type="date" id="date" required class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Reference / Notes</label>
+                    <input type="text" id="reference" placeholder="e.g. TXN001" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-1">Total Amount (₱)</label>
+                <input type="number" id="amount" required placeholder="0" class="w-full bg-slate-700 border border-slate-600 rounded-lg p-2.5 text-white font-bold text-lg">
+            </div>
+
+            <!-- Denominations Section -->
+            <div id="denomSection" class="border border-slate-700 p-4 rounded-lg bg-slate-750 space-y-3">
+                <h3 id="denomTitle" class="text-sm font-semibold text-amber-400 uppercase tracking-wider">Bills Dispensed (OUT)</h3>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs mb-1">₱100 Bills</label>
+                        <input type="number" id="b100" value="0" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-center">
+                    </div>
+                    <div>
+                        <label class="block text-xs mb-1">₱500 Bills</label>
+                        <input type="number" id="b500" value="0" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-center">
+                    </div>
+                    <div>
+                        <label class="block text-xs mb-1">₱1000 Bills</label>
+                        <input type="number" id="b1000" value="0" class="w-full bg-slate-700 border border-slate-600 rounded p-2 text-center">
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-lg transition duration-200">
+                Submit Transaction
+            </button>
+        </form>
+
+        <div id="statusMessage" class="mt-4 text-center text-sm hidden"></div>
+    </div>
+
+    <script>
+        // Set today's date by default
+        document.getElementById('date').valueAsDate = new Date();
+
+        function toggleFields() {
+            const type = document.getElementById('type').value;
+            const denomTitle = document.getElementById('denomTitle');
+            if (type === 'Cash Reload') {
+                denomTitle.innerText = "Bills Added (IN)";
+                denomTitle.className = "text-sm font-semibold text-emerald-400 uppercase tracking-wider";
+            } else if (type === 'Withdrawal') {
+                denomTitle.innerText = "Bills Dispensed (OUT)";
+                denomTitle.className = "text-sm font-semibold text-amber-400 uppercase tracking-wider";
+            } else {
+                denomTitle.innerText = "No Bills (Balance Inquiry)";
+                denomTitle.className = "text-sm font-semibold text-slate-400 uppercase tracking-wider";
+            }
+        }
+
+        const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+        document.getElementById('atmForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const status = document.getElementById('statusMessage');
+            
+            btn.disabled = true;
+            btn.innerText = "Submitting...";
+            status.classList.add('hidden');
+
+            const type = document.getElementById('type').value;
+            let amount = parseFloat(document.getElementById('amount').value) || 0;
+            if (type === 'Withdrawal' && amount > 0) amount = -amount;
+
+            const b100 = document.getElementById('b100').value;
+            const b500 = document.getElementById('b500').value;
+            const b1000 = document.getElementById('b1000').value;
+
+            const payload = {
+                date: document.getElementById('date').value,
+                reference: document.getElementById('reference').value,
+                amount: amount,
+                type: type,
+                b100_in: type === 'Cash Reload' ? b100 : "",
+                b500_in: type === 'Cash Reload' ? b500 : "",
+                b1000_in: type === 'Cash Reload' ? b1000 : "",
+                b100_out: type === 'Withdrawal' ? b100 : "",
+                b500_out: type === 'Withdrawal' ? b500 : "",
+                b1000_out: type === 'Withdrawal' ? b1000 : ""
+            };
+
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Required for Google Apps Script web apps
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                status.innerText = "✅ Transaction successfully recorded!";
+                status.className = "mt-4 text-center text-sm text-emerald-400 font-semibold";
+                status.classList.remove('hidden');
+                document.getElementById('atmForm').reset();
+                document.getElementById('date').valueAsDate = new Date();
+            } catch (err) {
+                status.innerText = "❌ Error submitting transaction. Please try again.";
+                status.className = "mt-4 text-center text-sm text-rose-400 font-semibold";
+                status.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Submit Transaction";
+            }
+        });
+    </script>
+</body>
+</html>

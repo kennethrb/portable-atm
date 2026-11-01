@@ -213,22 +213,36 @@ function calculateSuggestedDenominations() {
             remaining -= needed100 * 100;
         }
     } else if (type === 'Cash Reload') {
-        // Smart balanced reload: e.g., keep some proportion in 500s and 100s if amount allows, 
-        // or prioritize filling up lower denominations if they are low.
-        // For a clean practical split on large reloads:
-        let target1000 = Math.floor((remaining * 0.7) / 1000); // 70% in 1000s
+        // Inventory-Aware Smart Reload Strategy
+        let target100 = 0;
+        if (currentInventory.p100 < 30 && remaining >= 100) {
+            let needed100Count = Math.min(30 - currentInventory.p100, Math.floor(remaining / 100));
+            target100 = needed100Count;
+            remaining -= target100 * 100;
+        }
+
+        let target500 = 0;
+        if (currentInventory.p500 < 20 && remaining >= 500) {
+            let needed500Count = Math.min(20 - currentInventory.p500, Math.floor(remaining / 500));
+            target500 = needed500Count;
+            remaining -= target500 * 500;
+        }
+
+        // Allocate a buffer portion into 500s for general change mix on large reloads
+        if (remaining >= 5000) {
+            let extra500 = Math.floor((remaining * 0.2) / 500);
+            target500 += extra500;
+            remaining -= extra500 * 500;
+        }
+
+        // Dump remaining bulk into 1000 bills
+        let target1000 = Math.floor(remaining / 1000);
         remaining -= target1000 * 1000;
 
-        let target500 = Math.floor((remaining > 5000 ? 4000 : remaining * 0.8) / 500); // mix in 500s
-        remaining -= target500 * 500;
-
-        let target100 = Math.floor(remaining / 100);
-        remaining -= target100 * 100;
-
-        // Put any leftover back into 1000s
-        if (remaining > 0 && remaining % 1000 === 0) {
-            target1000 += remaining / 1000;
-            remaining = 0;
+        // Cleanup loose change remainder
+        if (remaining >= 100) {
+            target100 += Math.floor(remaining / 100);
+            remaining %= 100;
         }
 
         needed1000 = target1000;

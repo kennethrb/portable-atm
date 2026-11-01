@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VaultLink™ | Portable ATM Terminal</title>
+    <!-- PWA & Mobile Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#07090e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/emoji/192/atm-sign-emoji.png">
+    
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Custom Professional Stylesheet -->
@@ -30,9 +37,8 @@
             </button>
         </div>
 
-        <!-- Live Financial Summary Card (Glassmorphism) -->
+        <!-- Live Financial Summary Card -->
         <div class="bank-card rounded-2xl p-6 relative overflow-hidden">
-            <!-- Decorative ambient glow -->
             <div class="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
             <div class="flex justify-between items-start mb-4">
@@ -76,7 +82,7 @@
                 </div>
             </div>
 
-            <!-- 🚨 Low Stock / Low Balance Alert Banner -->
+            <!-- Low Stock / Low Balance Alert Banner -->
             <div id="lowStockAlert" class="hidden mt-4 bg-amber-950/40 border border-amber-600/50 p-3.5 rounded-xl flex items-center justify-between text-xs backdrop-blur-sm animate-pulse">
                 <span id="lowStockText" class="text-amber-200 font-medium">⚠️ Warning: Low cash in tray</span>
                 <button type="button" onclick="triggerQuickReload()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition shadow-md shadow-amber-900/40 whitespace-nowrap ml-2">
@@ -113,11 +119,32 @@
                     </div>
                 </div>
 
+                <!-- Total Amount & Quick-Amount Pills -->
                 <div>
                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Total Amount (₱)</label>
                     <div class="relative">
                         <span class="absolute left-4 top-3.5 text-slate-400 font-bold">₱</span>
                         <input type="number" id="amount" required placeholder="0.00" class="w-full bank-input rounded-xl p-3 pl-8 text-white font-extrabold text-xl focus:outline-none">
+                    </div>
+                    
+                    <!-- Quick Amount Shortcut Buttons -->
+                    <div id="quickAmountContainer" class="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-1">
+                        <button type="button" onclick="setQuickAmount(1000)" class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-xs px-2.5 py-1 rounded-lg font-semibold transition">₱1,000</button>
+                        <button type="button" onclick="setQuickAmount(2000)" class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-xs px-2.5 py-1 rounded-lg font-semibold transition">₱2,000</button>
+                        <button type="button" onclick="setQuickAmount(5000)" class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-xs px-2.5 py-1 rounded-lg font-semibold transition">₱5,000</button>
+                        <button type="button" onclick="setQuickAmount(10000)" class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 text-xs px-2.5 py-1 rounded-lg font-semibold transition">₱10,000</button>
+                    </div>
+                </div>
+
+                <!-- Client Fee Calculation Helper Card -->
+                <div id="feeCalculatorBox" class="bg-slate-900/40 border border-slate-800 p-3.5 rounded-xl space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-400 font-medium">Service Fee Charge:</span>
+                        <span id="calcFeeLabel" class="font-bold text-amber-400">₱14.00</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs pt-1.5 border-t border-slate-800/80">
+                        <span class="text-slate-200 font-semibold uppercase tracking-wider">Total Cash to Collect:</span>
+                        <span id="calcTotalCollect" class="font-extrabold text-emerald-400 text-sm">₱0.00</span>
                     </div>
                 </div>
 
@@ -160,11 +187,22 @@
             <div id="statusMessage" class="mt-4 text-center text-xs font-semibold hidden p-3 rounded-xl"></div>
         </div>
 
+        <!-- Recent Transactions Log Feed Card -->
+        <div class="bank-card rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-white text-base">Recent Transactions</h3>
+                <span class="text-[11px] text-slate-400">Last 5 Logs</span>
+            </div>
+            <div id="historyFeed" class="space-y-2.5">
+                <div class="text-center text-xs text-slate-500 py-3">Loading history...</div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Footer -->
     <footer class="text-center text-slate-500 text-xs mt-8">
-        VaultLink Terminal v2.5 • Connected to Secure Google Sheet DB
+        VaultLink Terminal v3.0 • Connected to Secure Google Sheet DB
     </footer>
 
     <!-- External JavaScript link -->

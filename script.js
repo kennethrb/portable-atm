@@ -2,7 +2,7 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-OAfp8qXmXQKIKpuMyOw2HEjoLg4OqmXBlFYYpujs92XWwE-8_Kdg51C_FSi3LvQwpA/exec";
 
 // Global variable to store live stock fetched from dashboard
-let currentInventory = { p100: 0, p500: 0, p1000: 0 };
+let currentInventory = { p100: 0, p500: 0, p1000: 0, totalBalance: 0 };
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('date').valueAsDate = new Date();
@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Listen to input and dropdown changes to trigger smart denomination suggestions
     document.getElementById('amount').addEventListener('input', calculateSuggestedDenominations);
-    document.getElementById('type').addEventListener('change', calculateSuggestedDenominations);
+    document.getElementById('type').addEventListener('change', toggleFields);
 });
 
 function toggleFields() {
@@ -38,24 +38,58 @@ async function fetchDashboardMetrics() {
         const data = await res.json();
         if (data.status === 'success') {
             const m = data.metrics;
-            document.getElementById('dashBalance').innerText = '₱' + Number(m.currentBalance).toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('dashFees').innerText = '₱' + Number(m.totalFees).toLocaleString('en-US', { minimumFractionDigits: 2 });
-            
-            // Save inventory for withdrawal calculation
+            currentInventory.totalBalance = parseFloat(m.currentBalance) || 0;
             currentInventory.p100 = parseInt(m.b100Remaining) || 0;
             currentInventory.p500 = parseInt(m.b500Remaining) || 0;
             currentInventory.p1000 = parseInt(m.b1000Remaining) || 0;
 
+            document.getElementById('dashBalance').innerText = '₱' + currentInventory.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('dashFees').innerText = '₱' + Number(m.totalFees).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            
             document.getElementById('dash100').innerText = currentInventory.p100;
             document.getElementById('dash500').innerText = currentInventory.p500;
             document.getElementById('dash1000').innerText = currentInventory.p1000;
+
+            // Check low stock and render alerts
+            checkLowStockAlerts();
         }
     } catch (err) {
         console.error("Error fetching dashboard metrics:", err);
     }
 }
 
-// 💡 Smart Denomination Suggestion Logic (Handles both Withdrawal & Cash Reload)
+// 🚨 Low Stock & Low Balance Checker
+function checkLowStockAlerts() {
+    const alertBox = document.getElementById('lowStockAlert');
+    const alertText = document.getElementById('lowStockText');
+    
+    let warnings = [];
+    const LOW_THRESHOLD = 10; // Trigger alert if any bill count is below 10
+
+    if (currentInventory.p1000 < LOW_THRESHOLD) warnings.push(`₱1,000 bills are low (${currentInventory.p1000} left)`);
+    if (currentInventory.p500 < LOW_THRESHOLD) warnings.push(`₱500 bills are low (${currentInventory.p500} left)`);
+    if (currentInventory.p100 < LOW_THRESHOLD) warnings.push(`₱100 bills are low (${currentInventory.p100} left)`);
+    if (currentInventory.totalBalance < 15000) warnings.push(`Total balance is low (₱${currentInventory.totalBalance.toLocaleString()})`);
+
+    if (warnings.length > 0) {
+        alertText.innerHTML = `⚠️ <b>Attention Needed:</b> ${warnings.join(' • ')}`;
+        alertBox.classList.remove('hidden');
+    } else {
+        alertBox.classList.add('hidden');
+    }
+}
+
+// ⚡ Quick action to initiate a reload from the alert banner
+function triggerQuickReload() {
+    document.getElementById('type').value = 'Cash Reload';
+    toggleFields();
+    document.getElementById('amount').focus();
+    document.getElementById('amount').value = 20000;
+    calculateSuggestedDenominations();
+    window.scrollTo({ top: document.getElementById('atmForm').offsetTop, behavior: 'smooth' });
+}
+
+// 💡 Smart Denomination Suggestion Logic
 function calculateSuggestedDenominations() {
     const type = document.getElementById('type').value;
     const suggestionBox = document.getElementById('suggestionBox');
@@ -75,7 +109,6 @@ function calculateSuggestedDenominations() {
     let remaining = targetAmount;
 
     if (type === 'Withdrawal') {
-        // --- Withdrawal Logic (Tray Inventory Constraint) ---
         let stock1000 = currentInventory.p1000;
         let stock500 = currentInventory.p500;
         let stock100 = currentInventory.p100;
@@ -98,7 +131,6 @@ function calculateSuggestedDenominations() {
             remaining -= needed100 * 100;
         }
     } else if (type === 'Cash Reload') {
-        // --- Cash Reload Logic (Optimal Denomination Breakdown) ---
         if (remaining >= 1000) {
             needed1000 = Math.floor(remaining / 1000);
             remaining -= needed1000 * 1000;
@@ -119,10 +151,9 @@ function calculateSuggestedDenominations() {
     const applyBtn = document.getElementById('applySuggestionBtn');
 
     if (remaining === 0 && (needed1000 > 0 || needed500 > 0 || needed100 > 0)) {
-        suggestionText.innerHTML = `💡 <b>Suggested Reload:</b> ₱1,000 × ${needed1000} | ₱500 × ${needed500} | ₱100 × ${needed100}`;
+        suggestionText.innerHTML = `💡 <b>Suggested ${type === 'Cash Reload' ? 'Reload' : 'Payout'}:</b> ₱1,000 × ${needed1000} | ₱500 × ${needed500} | ₱100 × ${needed100}`;
         suggestionBox.classList.remove('hidden');
 
-        // Attach action to apply button
         applyBtn.onclick = function() {
             document.getElementById('b1000').value = needed1000;
             document.getElementById('b500').value = needed500;
@@ -130,7 +161,7 @@ function calculateSuggestedDenominations() {
             suggestionBox.classList.add('hidden');
         };
     } else {
-        suggestionText.innerHTML = `⚠️ Amount must be a multiple of ₱100 (remainder: ₱${remaining})`;
+        suggestionText.innerHTML = `⚠️ Cannot exact-match amount (remainder: ₱${remaining})`;
         applyBtn.onclick = null;
         suggestionBox.classList.remove('hidden');
     }

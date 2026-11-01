@@ -75,6 +75,14 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 🚨 Low Stock / Low Balance Alert Banner -->
+            <div id="lowStockAlert" class="hidden mt-4 bg-amber-950/40 border border-amber-600/50 p-3.5 rounded-xl flex items-center justify-between text-xs backdrop-blur-sm animate-pulse">
+                <span id="lowStockText" class="text-amber-200 font-medium">⚠️ Warning: Low cash in tray</span>
+                <button type="button" onclick="triggerQuickReload()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition shadow-md shadow-amber-900/40 whitespace-nowrap ml-2">
+                    Reload Now
+                </button>
+            </div>
         </div>
 
         <!-- Transaction Terminal Form Card -->
@@ -156,7 +164,7 @@
 
     <!-- Footer -->
     <footer class="text-center text-slate-500 text-xs mt-8">
-        VaultLink Terminal v2.4 • Connected to Secure Google Sheet DB
+        VaultLink Terminal v2.5 • Connected to Secure Google Sheet DB
     </footer>
 
     <!-- External JavaScript link -->

@@ -105,6 +105,23 @@ async function fetchDashboardMetrics() {
             };
 
             setSafeText('dashBalance', '₱' + currentInventory.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            
+            // Update Float Health indicator based on Physical Cash Float totalBalance
+            const floatIndicator = document.getElementById('floatHealthIndicator');
+            if (floatIndicator) {
+                const bal = currentInventory.totalBalance;
+                if (bal > 50000) {
+                    floatIndicator.className = "px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center space-x-1";
+                    floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Green</span>`;
+                } else if (bal >= 15000 && bal <= 50000) {
+                    floatIndicator.className = "px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold flex items-center space-x-1";
+                    floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span>Yellow</span>`;
+                } else {
+                    floatIndicator.className = "px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold flex items-center space-x-1";
+                    floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span><span>Red</span>`;
+                }
+            }
+
             setSafeText('dashTodayWithdrawals', '₱' + Number(m.todayWithdrawals || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
             setSafeText('dashPendingSettlement', '₱' + Number(m.pendingSettlement || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
             
@@ -139,6 +156,7 @@ async function fetchDashboardMetrics() {
         console.error("❌ Error fetching metrics:", err);
     }
 }
+
 
 function renderRecentHistory(logs) {
     const feed = document.getElementById('historyFeed');

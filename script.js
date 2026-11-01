@@ -13,6 +13,24 @@ document.addEventListener("DOMContentLoaded", () => {
             calculateSuggestedDenominations();
             updateFeeCalculator();
         });
+
+        // ⬇️ Auto-focus jump when pressing Enter on Amount ⬇️
+        amountField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const type = document.getElementById('type')?.value;
+                if (type === 'Withdrawal' || type === 'Cash Reload') {
+                    const firstDenomInput = document.getElementById('b100');
+                    if (firstDenomInput) {
+                        firstDenomInput.focus();
+                        firstDenomInput.select();
+                    }
+                } else {
+                    const submitBtn = document.getElementById('submitBtn');
+                    if (submitBtn) submitBtn.focus();
+                }
+            }
+        });
     }
     
     const typeField = document.getElementById('type');
@@ -23,6 +41,28 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // ⬇️ Bill Denominations Keyboard Cascade (b100 -> b500 -> b1000 -> Submit) ⬇️
+    ['b100', 'b500', 'b1000'].forEach((id, index, arr) => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (index < arr.length - 1) {
+                        const nextInput = document.getElementById(arr[index + 1]);
+                        if (nextInput) {
+                            nextInput.focus();
+                            nextInput.select();
+                        }
+                    } else {
+                        const submitBtn = document.getElementById('submitBtn');
+                        if (submitBtn) submitBtn.focus();
+                    }
+                }
+            });
+        }
+    });
+
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch((err) => console.log('SW registration failed:', err));
     }
@@ -30,9 +70,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function setQuickAmount(val) {
     const amountField = document.getElementById('amount');
-    if (amountField) amountField.value = val;
-    calculateSuggestedDenominations();
-    updateFeeCalculator();
+    if (amountField) {
+        amountField.value = val;
+        calculateSuggestedDenominations();
+        updateFeeCalculator();
+        
+        // ⬇️ ADD THIS ENTIRE BLOCK INSIDE setQuickAmount ⬇️
+        const type = document.getElementById('type')?.value;
+        if (type === 'Withdrawal' || type === 'Cash Reload') {
+            const firstDenomInput = document.getElementById('b100');
+            if (firstDenomInput) {
+                firstDenomInput.focus();
+                firstDenomInput.select();
+            }
+        }
+        // ⬆️ END OF ADDITION ⬆️
+    }
 }
 
 function updateFeeCalculator() {
@@ -341,10 +394,27 @@ if (atmForm) {
             }
             return;
         }
+
+        // Denomination Validation Safeguard
+        if (type === 'Withdrawal' || type === 'Cash Reload') {
+            const b100Count = parseInt(document.getElementById('b100')?.value) || 0;
+            const b500Count = parseInt(document.getElementById('b500')?.value) || 0;
+            const b1000Count = parseInt(document.getElementById('b1000')?.value) || 0;
+            const calculatedDenomTotal = (b100Count * 100) + (b500Count * 500) + (b1000Count * 1000);
+
+            if (calculatedDenomTotal > 0 && calculatedDenomTotal !== rawAmount) {
+                if (status) {
+                    status.innerText = `❌ Mismatch: Bills total (₱${calculatedDenomTotal.toLocaleString()}) does not match Amount (₱${rawAmount.toLocaleString()})`;
+                    status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl";
+                    status.classList.remove('hidden');
+                }
+                return;
+            }
+        }
         
         if (btn) {
             btn.disabled = true;
-            btn.innerText = "Submitting...";
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...`;
         }
         if (status) status.classList.add('hidden');
 
@@ -413,3 +483,47 @@ if (atmForm) {
         }
     });
 }
+
+function showToast(message, type = 'success') {
+    // Remove existing toast if any
+    const existingToast = document.getElementById('toastNotification');
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'toastNotification';
+    const bgClass = type === 'success' ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-300' : 'bg-rose-950/90 border-rose-500/40 text-rose-300';
+    
+    toast.className = `fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 px-4 py-3 rounded-xl border ${bgClass} shadow-2xl backdrop-blur-md text-xs font-semibold flex items-center space-x-2 transition-all duration-300 animate-bounce`;
+    toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span><span>${message}</span>`;
+    
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    ['b100', 'b500', 'b1000'].forEach((id, index, arr) => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (index < arr.length - 1) {
+                        // Move to next bill input box
+                        const nextInput = document.getElementById(arr[index + 1]);
+                        if (nextInput) {
+                            nextInput.focus();
+                            nextInput.select();
+                        }
+                    } else {
+                        // Reached the last bill box, jump straight to the Submit button
+                        const submitBtn = document.getElementById('submitBtn');
+                        if (submitBtn) submitBtn.focus();
+                    }
+                }
+            });
+        }
+    });
+});

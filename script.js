@@ -1,6 +1,7 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-OAfp8qXmXQKIKpuMyOw2HEjoLg4OqmXBlFYYpujs92XWwE-8_Kdg51C_FSi3LvQwpA/exec";
 
 let currentInventory = { p100: 0, p500: 0, p1000: 0, totalBalance: 0 };
+let adaptivePatternData = { p100Percent: 15, p500Percent: 20, p1000Percent: 65, mostUsed: "₱1,000", fastestDepleting: "₱500" };
 
 document.addEventListener("DOMContentLoaded", () => {
     const dateField = document.getElementById('date');
@@ -148,6 +149,10 @@ async function fetchDashboardMetrics() {
             currentInventory.p500 = parseInt(m.b500Remaining) || 0;
             currentInventory.p1000 = parseInt(m.b1000Remaining) || 0;
 
+            if (m.adaptivePattern) {
+                adaptivePatternData = m.adaptivePattern;
+            }
+
             const setSafeText = (id, text) => {
                 const el = document.getElementById(id);
                 if (el) el.innerText = text;
@@ -155,32 +160,40 @@ async function fetchDashboardMetrics() {
 
             setSafeText('dashBalance', '₱' + currentInventory.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 }));
             
-            // Update Float Health indicator based on Physical Cash Float totalBalance
             const floatIndicator = document.getElementById('floatHealthIndicator');
             if (floatIndicator) {
                 const bal = currentInventory.totalBalance;
                 if (bal > 50000) {
                     floatIndicator.className = "px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center space-x-1";
-                    floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Green</span>`;
+                    floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Online</span>`;
                 } else if (bal >= 15000 && bal <= 50000) {
                     floatIndicator.className = "px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold flex items-center space-x-1";
-                    floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span>Yellow</span>`;
+                    floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span>Warning</span>`;
                 } else {
                     floatIndicator.className = "px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold flex items-center space-x-1";
-                    floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span><span>Red</span>`;
+                    floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span><span>Critical</span>`;
                 }
             }
 
             setSafeText('dashTodayWithdrawals', '₱' + Number(m.todayWithdrawals || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
             setSafeText('dashPendingSettlement', '₱' + Number(m.pendingSettlement || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
             
-            // Commission Receivable KPI Synchronization
             setSafeText('dashCommissionReceivable', '₱' + Number(m.commissionReceivable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
             setSafeText('dashCommissionCoverage', `Coverage: ${m.previousMonthName || 'Previous Month'}`);
             setSafeText('dashCommissionPayBy', `Expected Payout: ${m.expectedPayoutDate || '15th of Current Month'}`);
 
-            // Settlement Funds Available KPI Synchronization
             setSafeText('dashSettlementFunds', '₱' + Number(m.settlementFundsAvailable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
+
+            // Update Customer Cash Pattern Card UI
+            setSafeText('pattern100', adaptivePatternData.p100Percent + '%');
+            setSafeText('pattern500', adaptivePatternData.p500Percent + '%');
+            setSafeText('pattern1000', adaptivePatternData.p1000Percent + '%');
+            setSafeText('patternMostUsed', adaptivePatternData.mostUsed);
+
+            // Update Float Health Intelligence Card UI
+            setSafeText('healthMostConsumed', adaptivePatternData.mostUsed);
+            setSafeText('healthFastestDepleting', adaptivePatternData.fastestDepleting);
+            setSafeText('healthRecommendedReload', '₱' + Math.max(20000, Math.round((m.todayWithdrawals || 5000) * 2)).toLocaleString('en-US'));
 
             const settlementIndicator = document.getElementById('settlementStatusIndicator');
             const pendingVal = parseFloat(m.pendingSettlement) || 0;
@@ -316,44 +329,55 @@ function calculateSuggestedDenominations() {
             remaining -= needed100 * 100;
         }
     } else if (type === 'Cash Reload') {
-        let target100 = 0;
-        if (currentInventory.p100 < 30 && remaining >= 100) {
-            let needed100Count = Math.min(30 - currentInventory.p100, Math.floor(remaining / 100));
-            target100 = needed100Count;
-            remaining -= target100 * 100;
+        // Adaptive Reload Recommendation Engine with Inventory Awareness
+        let w100 = adaptivePatternData.p100Percent / 100;
+        let w500 = adaptivePatternData.p500Percent / 100;
+        let w1000 = adaptivePatternData.p1000Percent / 100;
+
+        // Inventory Awareness Weight Boost: Boost low stock denominations
+        if (currentInventory.p100 < 10) w100 *= 1.35;
+        if (currentInventory.p500 < 10) w500 *= 1.35;
+        if (currentInventory.p1000 < 10) w1000 *= 1.35;
+
+        let totalWeight = w100 + w500 + w1000;
+        let target100Amt = targetAmount * (w100 / totalWeight);
+        let target500Amt = targetAmount * (w500 / totalWeight);
+        let target1000Amt = targetAmount - target100Amt - target500Amt;
+
+        needed100 = Math.floor(target100Amt / 100);
+        needed500 = Math.floor(target500Amt / 500);
+        needed1000 = Math.floor(target1000Amt / 1000);
+
+        let distributedTotal = (needed100 * 100) + (needed500 * 500) + (needed1000 * 1000);
+        let diff = targetAmount - distributedTotal;
+        if (diff >= 1000) {
+            let extra1000 = Math.floor(diff / 1000);
+            needed1000 += extra1000;
+            diff -= extra1000 * 1000;
         }
-
-        let target500 = 0;
-        if (currentInventory.p500 < 20 && remaining >= 500) {
-            let needed500Count = Math.min(20 - currentInventory.p500, Math.floor(remaining / 500));
-            target500 = needed500Count;
-            remaining -= target500 * 500;
+        if (diff >= 500) {
+            needed500 += 1;
+            diff -= 500;
         }
-
-        if (remaining >= 5000) {
-            let extra500 = Math.floor((remaining * 0.2) / 500);
-            target500 += extra500;
-            remaining -= extra500 * 500;
+        if (diff >= 100) {
+            needed100 += Math.round(diff / 100);
         }
-
-        let target1000 = Math.floor(remaining / 1000);
-        remaining -= target1000 * 1000;
-
-        if (remaining >= 100) {
-            target100 += Math.floor(remaining / 100);
-            remaining %= 100;
-        }
-
-        needed1000 = target1000;
-        needed500 = target500;
-        needed100 = target100;
     }
 
     const suggestionText = document.getElementById('suggestionText');
     const applyBtn = document.getElementById('applySuggestionBtn');
 
-    if (remaining === 0 && (needed1000 > 0 || needed500 > 0 || needed100 > 0)) {
-        if (suggestionText) suggestionText.innerHTML = `💡 <b>Suggested Breakdown:</b> ₱1,000 × ${needed1000} | ₱500 × ${needed500} | ₱100 × ${needed100}`;
+    if (targetAmount > 0 && (needed1000 > 0 || needed500 > 0 || needed100 > 0)) {
+        if (suggestionText) {
+            if (type === 'Cash Reload') {
+                let amt100 = needed100 * 100;
+                let amt500 = needed500 * 500;
+                let amt1000 = needed1000 * 1000;
+                suggestionText.innerHTML = `💡 <b>Adaptive Reload:</b> ₱100=₱${amt100.toLocaleString()} | ₱500=₱${amt500.toLocaleString()} | ₱1000=₱${amt1000.toLocaleString()}`;
+            } else {
+                suggestionText.innerHTML = `💡 <b>Suggested Breakdown:</b> ₱1,000 × ${needed1000} | ₱500 × ${needed500} | ₱100 × ${needed100}`;
+            }
+        }
         suggestionBox.classList.remove('hidden');
 
         if (applyBtn) {
@@ -368,9 +392,9 @@ function calculateSuggestedDenominations() {
             };
         }
     } else {
-        if (suggestionText) suggestionText.innerHTML = `⚠️ Cannot exact-match amount (remainder: ₱${remaining})`;
+        if (suggestionText) suggestionText.innerHTML = `⚠️ Cannot exact-match amount`;
         if (applyBtn) applyBtn.onclick = null;
-        suggestionBox.classList.remove('hidden');
+        suggestionBox.classList.add('hidden');
     }
 }
 

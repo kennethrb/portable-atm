@@ -1,33 +1,76 @@
 // Replace this with your actual Google Apps Script Web App URL
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-OAfp8qXmXQKIKpuMyOw2HEjoLg4OqmXBlFYYpujs92XWwE-8_Kdg51C_FSi3LvQwpA/exec";
 
-// Global variable to store live stock fetched from dashboard
 let currentInventory = { p100: 0, p500: 0, p1000: 0, totalBalance: 0 };
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('date').valueAsDate = new Date();
     fetchDashboardMetrics();
 
-    // Listen to input and dropdown changes to trigger smart denomination suggestions
-    document.getElementById('amount').addEventListener('input', calculateSuggestedDenominations);
-    document.getElementById('type').addEventListener('change', toggleFields);
+    document.getElementById('amount').addEventListener('input', () => {
+        calculateSuggestedDenominations();
+        updateFeeCalculator();
+    });
+    
+    document.getElementById('type').addEventListener('change', () => {
+        toggleFields();
+        updateFeeCalculator();
+    });
+
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch((err) => console.log('SW registration failed:', err));
+    }
 });
+
+// Quick-Amount Pills handler
+function setQuickAmount(val) {
+    document.getElementById('amount').value = val;
+    calculateSuggestedDenominations();
+    updateFeeCalculator();
+}
+
+// Fee Calculation Helper Logic
+function updateFeeCalculator() {
+    const type = document.getElementById('type').value;
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const calcBox = document.getElementById('feeCalculatorBox');
+    const feeLabel = document.getElementById('calcFeeLabel');
+    const totalCollect = document.getElementById('calcTotalCollect');
+
+    if (type === 'Withdrawal') {
+        calcBox.classList.remove('hidden');
+        feeLabel.innerText = "₱14.00";
+        totalCollect.innerText = '₱' + (amount + 14).toLocaleString('en-US', { minimumFractionDigits: 2 });
+    } else if (type === 'Balance Inquiry') {
+        calcBox.classList.remove('hidden');
+        feeLabel.innerText = "₱5.00";
+        totalCollect.innerText = '₱5.00';
+    } else {
+        // Cash Reload doesn't charge customer service fee
+        calcBox.classList.add('hidden');
+    }
+}
 
 function toggleFields() {
     const type = document.getElementById('type').value;
     const denomTitle = document.getElementById('denomTitle');
+    const quickPills = document.getElementById('quickAmountContainer');
     
     if (type === 'Cash Reload') {
         denomTitle.innerText = "Bills Added (IN)";
         denomTitle.className = "text-xs font-semibold text-emerald-400 uppercase tracking-wider";
+        quickPills.classList.remove('hidden');
         calculateSuggestedDenominations();
     } else if (type === 'Withdrawal') {
         denomTitle.innerText = "Bills Dispensed (OUT)";
         denomTitle.className = "text-xs font-semibold text-amber-400 uppercase tracking-wider";
+        quickPills.classList.remove('hidden');
         calculateSuggestedDenominations();
     } else {
         denomTitle.innerText = "No Bills (Balance Inquiry)";
         denomTitle.className = "text-xs font-semibold text-slate-400 uppercase tracking-wider";
+        quickPills.classList.add('hidden');
         document.getElementById('suggestionBox').classList.add('hidden');
     }
 }
@@ -50,46 +93,76 @@ async function fetchDashboardMetrics() {
             document.getElementById('dash500').innerText = currentInventory.p500;
             document.getElementById('dash1000').innerText = currentInventory.p1000;
 
-            // Check low stock and render alerts
             checkLowStockAlerts();
+
+            // Render Recent Transaction Feed
+            if (data.recentHistory) {
+                renderRecentHistory(data.recentHistory);
+            }
         }
     } catch (err) {
-        console.error("Error fetching dashboard metrics:", err);
+        console.error("Error fetching metrics:", err);
     }
 }
 
-// 🚨 Low Stock & Low Balance Checker
+// History Feed Builder
+function renderRecentHistory(logs) {
+    const feed = document.getElementById('historyFeed');
+    if (logs.length === 0) {
+        feed.innerHTML = `<div class="text-center text-xs text-slate-500 py-3">No recent transactions logged yet.</div>`;
+        return;
+    }
+
+    feed.innerHTML = logs.map(tx => {
+        const isReload = tx.type === 'Cash Reload';
+        const isBalance = tx.type === 'Balance Inquiry';
+        const color = isReload ? 'text-emerald-400' : isBalance ? 'text-indigo-400' : 'text-amber-400';
+        const sign = isReload ? '+' : isBalance ? '' : '-';
+
+        return `
+            <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-white">${tx.type}</span>
+                        <span class="text-[10px] text-slate-500 font-mono">${tx.reference}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">${tx.date}</span>
+                </div>
+                <span class="font-extrabold ${color}">
+                    ${sign}₱${Math.abs(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
+            </div>
+        `;
+    }).join('');
+}
+
 function checkLowStockAlerts() {
     const alertBox = document.getElementById('lowStockAlert');
     const alertText = document.getElementById('lowStockText');
-    
     let warnings = [];
-    const LOW_THRESHOLD = 10; // Trigger alert if any bill count is below 10
+    const LOW_THRESHOLD = 10;
 
-    if (currentInventory.p1000 < LOW_THRESHOLD) warnings.push(`₱1,000 bills are low (${currentInventory.p1000} left)`);
-    if (currentInventory.p500 < LOW_THRESHOLD) warnings.push(`₱500 bills are low (${currentInventory.p500} left)`);
-    if (currentInventory.p100 < LOW_THRESHOLD) warnings.push(`₱100 bills are low (${currentInventory.p100} left)`);
-    if (currentInventory.totalBalance < 15000) warnings.push(`Total balance is low (₱${currentInventory.totalBalance.toLocaleString()})`);
+    if (currentInventory.p1000 < LOW_THRESHOLD) warnings.push(`₱1,000 bills low (${currentInventory.p1000})`);
+    if (currentInventory.p500 < LOW_THRESHOLD) warnings.push(`₱500 bills low (${currentInventory.p500})`);
+    if (currentInventory.p100 < LOW_THRESHOLD) warnings.push(`₱100 bills low (${currentInventory.p100})`);
+    if (currentInventory.totalBalance < 15000) warnings.push(`Low balance (₱${currentInventory.totalBalance.toLocaleString()})`);
 
     if (warnings.length > 0) {
-        alertText.innerHTML = `⚠️ <b>Attention Needed:</b> ${warnings.join(' • ')}`;
+        alertText.innerHTML = `⚠️ <b>Alert:</b> ${warnings.join(' • ')}`;
         alertBox.classList.remove('hidden');
     } else {
         alertBox.classList.add('hidden');
     }
 }
 
-// ⚡ Quick action to initiate a reload from the alert banner
 function triggerQuickReload() {
     document.getElementById('type').value = 'Cash Reload';
     toggleFields();
     document.getElementById('amount').focus();
-    document.getElementById('amount').value = 20000;
-    calculateSuggestedDenominations();
+    setQuickAmount(20000);
     window.scrollTo({ top: document.getElementById('atmForm').offsetTop, behavior: 'smooth' });
 }
 
-// 💡 Smart Denomination Suggestion Logic
 function calculateSuggestedDenominations() {
     const type = document.getElementById('type').value;
     const suggestionBox = document.getElementById('suggestionBox');
@@ -151,7 +224,7 @@ function calculateSuggestedDenominations() {
     const applyBtn = document.getElementById('applySuggestionBtn');
 
     if (remaining === 0 && (needed1000 > 0 || needed500 > 0 || needed100 > 0)) {
-        suggestionText.innerHTML = `💡 <b>Suggested ${type === 'Cash Reload' ? 'Reload' : 'Payout'}:</b> ₱1,000 × ${needed1000} | ₱500 × ${needed500} | ₱100 × ${needed100}`;
+        suggestionText.innerHTML = `💡 <b>Suggested Breakdown:</b> ₱1,000 × ${needed1000} | ₱500 × ${needed500} | ₱100 × ${needed100}`;
         suggestionBox.classList.remove('hidden');
 
         applyBtn.onclick = function() {
@@ -211,6 +284,7 @@ document.getElementById('atmForm').addEventListener('submit', async function(e) 
         document.getElementById('atmForm').reset();
         document.getElementById('date').valueAsDate = new Date();
         document.getElementById('suggestionBox').classList.add('hidden');
+        updateFeeCalculator();
         
         setTimeout(fetchDashboardMetrics, 1500);
     } catch (err) {

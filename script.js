@@ -108,14 +108,10 @@ async function fetchDashboardMetrics() {
             setSafeText('dashTodayWithdrawals', '₱' + Number(m.todayWithdrawals || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
             setSafeText('dashPendingSettlement', '₱' + Number(m.pendingSettlement || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
             
-            // Commission Accounting Logic Integration
-            setSafeText('dashCommissionAwaiting', '₱' + Number(m.commissionAwaitingPayout || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            // Commission Receivable KPI Synchronization
+            setSafeText('dashCommissionReceivable', '₱' + Number(m.commissionReceivable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
             setSafeText('dashCommissionCoverage', `Coverage: ${m.previousMonthName || 'Previous Month'}`);
-            setSafeText('dashCommissionPayBy', `Pay By: ${m.expectedPayoutDate || '15th of Current Month'}`);
-
-            setSafeText('dashCurrentMonthCommission', '₱' + Number(m.currentMonthCommission || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
-            setSafeText('dashCurrentMonthCoverage', `Coverage: ${m.currentMonthName || 'Current Month'}`);
-            setSafeText('dashCurrentMonthPayBy', `Pay By: ${m.nextMonthPayoutDate || '15th of Next Month'}`);
+            setSafeText('dashCommissionPayBy', `Expected Payout: ${m.expectedPayoutDate || '15th of Current Month'}`);
 
             const settlementIndicator = document.getElementById('settlementStatusIndicator');
             const pendingVal = parseFloat(m.pendingSettlement) || 0;
@@ -154,10 +150,10 @@ function renderRecentHistory(logs) {
     }
 
     feed.innerHTML = logs.map(tx => {
-        const isReload = tx.type === 'Cash Reload';
+        const isReload = tx.type === 'Cash Reload' || tx.type === 'Settlement Received';
         const isBalance = tx.type === 'Balance Inquiry';
         const color = isReload ? 'text-emerald-400' : isBalance ? 'text-indigo-400' : 'text-amber-400';
-        const sign = isReload ? '+' : isBalance ? '' : '-';
+        const sign = isReload && tx.type !== 'Settlement Received' ? '+' : isBalance ? '' : tx.type === 'Settlement Received' ? '+' : '-';
 
         return `
             <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
@@ -348,9 +344,9 @@ if (atmForm) {
             reference: refVal,
             amount: amount,
             type: type,
-            b100_in: type === 'Cash Reload' ? b100 : "",
-            b500_in: type === 'Cash Reload' ? b500 : "",
-            b1000_in: type === 'Cash Reload' ? b1000 : "",
+            b100_in: type === 'Cash Reload' || type === 'Settlement Received' ? b100 : "",
+            b500_in: type === 'Cash Reload' || type === 'Settlement Received' ? b500 : "",
+            b1000_in: type === 'Cash Reload' || type === 'Settlement Received' ? b1000 : "",
             b100_out: type === 'Withdrawal' ? b100 : "",
             b500_out: type === 'Withdrawal' ? b500 : "",
             b1000_out: type === 'Withdrawal' ? b1000 : ""

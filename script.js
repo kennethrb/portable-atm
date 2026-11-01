@@ -14,7 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
             updateFeeCalculator();
         });
 
-        // ⬇️ Auto-focus jump when pressing Enter on Amount ⬇️
         amountField.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -41,7 +40,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ⬇️ Bill Denominations Keyboard Cascade (b100 -> b500 -> b1000 -> Submit) ⬇️
     ['b100', 'b500', 'b1000'].forEach((id, index, arr) => {
         const input = document.getElementById(id);
         if (input) {
@@ -75,7 +73,6 @@ function setQuickAmount(val) {
         calculateSuggestedDenominations();
         updateFeeCalculator();
         
-        // ⬇️ ADD THIS ENTIRE BLOCK INSIDE setQuickAmount ⬇️
         const type = document.getElementById('type')?.value;
         if (type === 'Withdrawal' || type === 'Cash Reload') {
             const firstDenomInput = document.getElementById('b100');
@@ -84,7 +81,6 @@ function setQuickAmount(val) {
                 firstDenomInput.select();
             }
         }
-        // ⬆️ END OF ADDITION ⬆️
     }
 }
 
@@ -183,6 +179,9 @@ async function fetchDashboardMetrics() {
             setSafeText('dashCommissionCoverage', `Coverage: ${m.previousMonthName || 'Previous Month'}`);
             setSafeText('dashCommissionPayBy', `Expected Payout: ${m.expectedPayoutDate || '15th of Current Month'}`);
 
+            // Settlement Funds Available KPI Synchronization
+            setSafeText('dashSettlementFunds', '₱' + Number(m.settlementFundsAvailable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
+
             const settlementIndicator = document.getElementById('settlementStatusIndicator');
             const pendingVal = parseFloat(m.pendingSettlement) || 0;
             if (settlementIndicator) {
@@ -209,7 +208,6 @@ async function fetchDashboardMetrics() {
         console.error("❌ Error fetching metrics:", err);
     }
 }
-
 
 function renderRecentHistory(logs) {
     const feed = document.getElementById('historyFeed');
@@ -395,7 +393,6 @@ if (atmForm) {
             return;
         }
 
-        // Denomination Validation Safeguard
         if (type === 'Withdrawal' || type === 'Cash Reload') {
             const b100Count = parseInt(document.getElementById('b100')?.value) || 0;
             const b500Count = parseInt(document.getElementById('b500')?.value) || 0;
@@ -483,47 +480,3 @@ if (atmForm) {
         }
     });
 }
-
-function showToast(message, type = 'success') {
-    // Remove existing toast if any
-    const existingToast = document.getElementById('toastNotification');
-    if (existingToast) existingToast.remove();
-
-    const toast = document.createElement('div');
-    toast.id = 'toastNotification';
-    const bgClass = type === 'success' ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-300' : 'bg-rose-950/90 border-rose-500/40 text-rose-300';
-    
-    toast.className = `fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 px-4 py-3 rounded-xl border ${bgClass} shadow-2xl backdrop-blur-md text-xs font-semibold flex items-center space-x-2 transition-all duration-300 animate-bounce`;
-    toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span><span>${message}</span>`;
-    
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-    }, 3500);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    ['b100', 'b500', 'b1000'].forEach((id, index, arr) => {
-        const input = document.getElementById(id);
-        if (input) {
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (index < arr.length - 1) {
-                        // Move to next bill input box
-                        const nextInput = document.getElementById(arr[index + 1]);
-                        if (nextInput) {
-                            nextInput.focus();
-                            nextInput.select();
-                        }
-                    } else {
-                        // Reached the last bill box, jump straight to the Submit button
-                        const submitBtn = document.getElementById('submitBtn');
-                        if (submitBtn) submitBtn.focus();
-                    }
-                }
-            });
-        }
-    });
-});

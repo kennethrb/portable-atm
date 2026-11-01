@@ -1,4 +1,3 @@
-// Replace this with your actual Google Apps Script Web App URL
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-OAfp8qXmXQKIKpuMyOw2HEjoLg4OqmXBlFYYpujs92XWwE-8_Kdg51C_FSi3LvQwpA/exec";
 
 let currentInventory = { p100: 0, p500: 0, p1000: 0, totalBalance: 0 };
@@ -17,20 +16,17 @@ document.addEventListener("DOMContentLoaded", () => {
         updateFeeCalculator();
     });
 
-    // PWA Service Worker Registration
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch((err) => console.log('SW registration failed:', err));
     }
 });
 
-// Quick-Amount Pills handler
 function setQuickAmount(val) {
     document.getElementById('amount').value = val;
     calculateSuggestedDenominations();
     updateFeeCalculator();
 }
 
-// Fee Calculation Helper Logic
 function updateFeeCalculator() {
     const type = document.getElementById('type').value;
     const amount = parseFloat(document.getElementById('amount').value) || 0;
@@ -47,7 +43,6 @@ function updateFeeCalculator() {
         feeLabel.innerText = "₱5.00";
         totalCollect.innerText = '₱5.00';
     } else {
-        // Cash Reload doesn't charge customer service fee
         calcBox.classList.add('hidden');
     }
 }
@@ -77,11 +72,8 @@ function toggleFields() {
 
 async function fetchDashboardMetrics() {
     try {
-        console.log("🔍 Fetching metrics from Google Apps Script Backend...");
         const res = await fetch(SCRIPT_URL);
         const data = await res.json();
-        
-        console.log("📥 Raw Payload Received:", data);
 
         if (data.status === 'success') {
             const m = data.metrics;
@@ -90,13 +82,12 @@ async function fetchDashboardMetrics() {
             currentInventory.p500 = parseInt(m.b500Remaining) || 0;
             currentInventory.p1000 = parseInt(m.b1000Remaining) || 0;
 
-            console.log("📊 Parsed Balance:", currentInventory.totalBalance);
-            console.log("💰 Parsed Fees:", m.totalFees);
-            console.log("💵 Parsed Inventory (100|500|1000):", currentInventory.p100, currentInventory.p500, currentInventory.p1000);
-
             document.getElementById('dashBalance').innerText = '₱' + currentInventory.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('dashFees').innerText = '₱' + Number(m.totalFees).toLocaleString('en-US', { minimumFractionDigits: 2 });
-            
+            document.getElementById('dashPendingSettlement').innerText = '₱' + Number(m.pendingSettlement || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('dashTodayFees').innerText = '₱' + Number(m.todayFees || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('dashTodayWithdrawals').innerText = '₱' + Number(m.todayWithdrawals || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('dashMonthFees').innerText = '₱' + Number(m.monthFees || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+
             document.getElementById('dash100').innerText = currentInventory.p100;
             document.getElementById('dash500').innerText = currentInventory.p500;
             document.getElementById('dash1000').innerText = currentInventory.p1000;
@@ -106,15 +97,12 @@ async function fetchDashboardMetrics() {
             if (data.recentHistory) {
                 renderRecentHistory(data.recentHistory);
             }
-        } else {
-            console.error("❌ Backend Error Status:", data.message);
         }
     } catch (err) {
-        console.error("❌ Network / Fetch Error:", err);
+        console.error("❌ Error fetching metrics:", err);
     }
 }
 
-// History Feed Builder
 function renderRecentHistory(logs) {
     const feed = document.getElementById('historyFeed');
     if (logs.length === 0) {
@@ -213,7 +201,6 @@ function calculateSuggestedDenominations() {
             remaining -= needed100 * 100;
         }
     } else if (type === 'Cash Reload') {
-        // Inventory-Aware Smart Reload Strategy
         let target100 = 0;
         if (currentInventory.p100 < 30 && remaining >= 100) {
             let needed100Count = Math.min(30 - currentInventory.p100, Math.floor(remaining / 100));
@@ -228,18 +215,15 @@ function calculateSuggestedDenominations() {
             remaining -= target500 * 500;
         }
 
-        // Allocate a buffer portion into 500s for general change mix on large reloads
         if (remaining >= 5000) {
             let extra500 = Math.floor((remaining * 0.2) / 500);
             target500 += extra500;
             remaining -= extra500 * 500;
         }
 
-        // Dump remaining bulk into 1000 bills
         let target1000 = Math.floor(remaining / 1000);
         remaining -= target1000 * 1000;
 
-        // Cleanup loose change remainder
         if (remaining >= 100) {
             target100 += Math.floor(remaining / 100);
             remaining %= 100;
@@ -274,13 +258,23 @@ document.getElementById('atmForm').addEventListener('submit', async function(e) 
     e.preventDefault();
     const btn = document.getElementById('submitBtn');
     const status = document.getElementById('statusMessage');
+
+    const type = document.getElementById('type').value;
+    let rawAmount = parseFloat(document.getElementById('amount').value) || 0;
+
+    // Client-side BancNet ₱10,000 Maximum Withdrawal Policy Validation
+    if (type === 'Withdrawal' && rawAmount > 10000) {
+        status.innerText = "❌ Policy Violation: Maximum withdrawal per transaction is ₱10,000.";
+        status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl";
+        status.classList.remove('hidden');
+        return;
+    }
     
     btn.disabled = true;
     btn.innerText = "Submitting...";
     status.classList.add('hidden');
 
-    const type = document.getElementById('type').value;
-    let amount = parseFloat(document.getElementById('amount').value) || 0;
+    let amount = rawAmount;
     if (type === 'Withdrawal' && amount > 0) amount = -amount;
 
     const b100 = document.getElementById('b100').value;
@@ -301,24 +295,31 @@ document.getElementById('atmForm').addEventListener('submit', async function(e) 
     };
 
     try {
-        await fetch(SCRIPT_URL, {
+        // Removed mode: 'no-cors' to properly verify true backend status response
+        const res = await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         });
 
-        status.innerText = "✅ Transaction successfully recorded!";
-        status.className = "mt-4 text-center text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 p-3 rounded-xl";
-        status.classList.remove('hidden');
-        document.getElementById('atmForm').reset();
-        document.getElementById('date').valueAsDate = new Date();
-        document.getElementById('suggestionBox').classList.add('hidden');
-        updateFeeCalculator();
-        
-        setTimeout(fetchDashboardMetrics, 1500);
+        const result = await res.json();
+
+        if (result.status === 'success') {
+            status.innerText = "✅ Transaction successfully recorded!";
+            status.className = "mt-4 text-center text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 p-3 rounded-xl";
+            status.classList.remove('hidden');
+            document.getElementById('atmForm').reset();
+            document.getElementById('date').valueAsDate = new Date();
+            document.getElementById('suggestionBox').classList.add('hidden');
+            updateFeeCalculator();
+            setTimeout(fetchDashboardMetrics, 1200);
+        } else {
+            status.innerText = "❌ Server Error: " + (result.message || "Failed to record.");
+            status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl";
+            status.classList.remove('hidden');
+        }
     } catch (err) {
-        status.innerText = "❌ Error submitting transaction. Please try again.";
+        status.innerText = "❌ Network error. Transaction was not confirmed.";
         status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl";
         status.classList.remove('hidden');
     } finally {

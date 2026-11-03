@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const type = document.getElementById('type')?.value;
-                if (type === 'Withdrawal' || type === 'Cash Reload') {
+                if (type === 'Withdrawal' || type === 'Cash Reload' || type === 'Owner Capital Injection') {
                     const firstDenomInput = document.getElementById('b100');
                     if (firstDenomInput) {
                         firstDenomInput.focus();
@@ -75,7 +75,7 @@ function setQuickAmount(val) {
         updateFeeCalculator();
         
         const type = document.getElementById('type')?.value;
-        if (type === 'Withdrawal' || type === 'Cash Reload') {
+        if (type === 'Withdrawal' || type === 'Cash Reload' || type === 'Owner Capital Injection') {
             const firstDenomInput = document.getElementById('b100');
             if (firstDenomInput) {
                 firstDenomInput.focus();
@@ -114,10 +114,10 @@ function toggleFields() {
     const denomSection = document.getElementById('denomSection');
     const suggestionBox = document.getElementById('suggestionBox');
     
-    if (type === 'Cash Reload') {
+    if (type === 'Cash Reload' || type === 'Owner Capital Injection') {
         if (denomSection) denomSection.classList.remove('hidden');
         if (denomTitle) {
-            denomTitle.innerText = "Bills Added (IN)";
+            denomTitle.innerText = type === 'Owner Capital Injection' ? "Capital Bills Added (IN)" : "Bills Added (IN)";
             denomTitle.className = "text-xs font-semibold text-emerald-400 uppercase tracking-wider";
         }
         if (quickPills) quickPills.classList.remove('hidden');
@@ -184,13 +184,11 @@ async function fetchDashboardMetrics() {
 
             setSafeText('dashSettlementFunds', '₱' + Number(m.settlementFundsAvailable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
 
-            // Update Customer Cash Pattern Card UI
             setSafeText('pattern100', adaptivePatternData.p100Percent + '%');
             setSafeText('pattern500', adaptivePatternData.p500Percent + '%');
             setSafeText('pattern1000', adaptivePatternData.p1000Percent + '%');
             setSafeText('patternMostUsed', adaptivePatternData.mostUsed);
 
-            // Update Float Health Intelligence Card UI
             setSafeText('healthMostConsumed', adaptivePatternData.mostUsed);
             setSafeText('healthFastestDepleting', adaptivePatternData.fastestDepleting);
             setSafeText('healthRecommendedReload', '₱' + Math.max(20000, Math.round((m.todayWithdrawals || 5000) * 2)).toLocaleString('en-US'));
@@ -232,7 +230,7 @@ function renderRecentHistory(logs) {
     }
 
     feed.innerHTML = logs.map(tx => {
-        const isReload = tx.type === 'Cash Reload' || tx.type === 'Settlement Received';
+        const isReload = tx.type === 'Cash Reload' || tx.type === 'Owner Capital Injection' || tx.type === 'Settlement Received';
         const isBalance = tx.type === 'Balance Inquiry';
         const color = isReload ? 'text-emerald-400' : isBalance ? 'text-indigo-400' : 'text-amber-400';
         const sign = isReload && tx.type !== 'Settlement Received' ? '+' : isBalance ? '' : tx.type === 'Settlement Received' ? '+' : '-';
@@ -328,13 +326,11 @@ function calculateSuggestedDenominations() {
             if (needed100 > stock100) needed100 = stock100;
             remaining -= needed100 * 100;
         }
-    } else if (type === 'Cash Reload') {
-        // Adaptive Reload Recommendation Engine with Inventory Awareness
+    } else if (type === 'Cash Reload' || type === 'Owner Capital Injection') {
         let w100 = adaptivePatternData.p100Percent / 100;
         let w500 = adaptivePatternData.p500Percent / 100;
         let w1000 = adaptivePatternData.p1000Percent / 100;
 
-        // Inventory Awareness Weight Boost: Boost low stock denominations
         if (currentInventory.p100 < 10) w100 *= 1.35;
         if (currentInventory.p500 < 10) w500 *= 1.35;
         if (currentInventory.p1000 < 10) w1000 *= 1.35;
@@ -369,11 +365,11 @@ function calculateSuggestedDenominations() {
 
     if (targetAmount > 0 && (needed1000 > 0 || needed500 > 0 || needed100 > 0)) {
         if (suggestionText) {
-            if (type === 'Cash Reload') {
+            if (type === 'Cash Reload' || type === 'Owner Capital Injection') {
                 let amt100 = needed100 * 100;
                 let amt500 = needed500 * 500;
                 let amt1000 = needed1000 * 1000;
-                suggestionText.innerHTML = `💡 <b>Adaptive Reload:</b> ₱100=₱${amt100.toLocaleString()} | ₱500=₱${amt500.toLocaleString()} | ₱1000=₱${amt1000.toLocaleString()}`;
+                suggestionText.innerHTML = `💡 <b>Adaptive Breakdown:</b> ₱100=₱${amt100.toLocaleString()} | ₱500=₱${amt500.toLocaleString()} | ₱1000=₱${amt1000.toLocaleString()}`;
             } else {
                 suggestionText.innerHTML = `💡 <b>Suggested Breakdown:</b> ₱1,000 × ${needed1000} | ₱500 × ${needed500} | ₱100 × ${needed100}`;
             }
@@ -417,7 +413,7 @@ if (atmForm) {
             return;
         }
 
-        if (type === 'Withdrawal' || type === 'Cash Reload') {
+        if (type === 'Withdrawal' || type === 'Cash Reload' || type === 'Owner Capital Injection') {
             const b100Count = parseInt(document.getElementById('b100')?.value) || 0;
             const b500Count = parseInt(document.getElementById('b500')?.value) || 0;
             const b1000Count = parseInt(document.getElementById('b1000')?.value) || 0;
@@ -453,9 +449,9 @@ if (atmForm) {
             reference: refVal,
             amount: amount,
             type: type,
-            b100_in: type === 'Cash Reload' || type === 'Settlement Received' ? b100 : "",
-            b500_in: type === 'Cash Reload' || type === 'Settlement Received' ? b500 : "",
-            b1000_in: type === 'Cash Reload' || type === 'Settlement Received' ? b1000 : "",
+            b100_in: (type === 'Cash Reload' || type === 'Owner Capital Injection' || type === 'Settlement Received') ? b100 : "",
+            b500_in: (type === 'Cash Reload' || type === 'Owner Capital Injection' || type === 'Settlement Received') ? b500 : "",
+            b1000_in: (type === 'Cash Reload' || type === 'Owner Capital Injection' || type === 'Settlement Received') ? b1000 : "",
             b100_out: type === 'Withdrawal' ? b100 : "",
             b500_out: type === 'Withdrawal' ? b500 : "",
             b1000_out: type === 'Withdrawal' ? b1000 : ""

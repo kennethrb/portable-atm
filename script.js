@@ -2,6 +2,8 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-OAfp8qXmXQKIKpuMy
 
 let currentInventory = { p100: 0, p500: 0, p1000: 0, totalBalance: 0 };
 let adaptivePatternData = { p100Percent: 15, p500Percent: 20, p1000Percent: 65, mostUsed: "₱1,000", fastestDepleting: "₱500" };
+let allRecentHistoryLogs = [];
+let currentTransactionFilter = 'All';
 let statusTimeout = null;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -234,18 +236,28 @@ async function fetchDashboardMetrics() {
             // Existing Dashboard Elements
             setSafeText('dashBalance', '₱' + currentInventory.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 }));
             
+            // Adaptive Physical Cash Float Card Theme based on Health
             const floatIndicator = document.getElementById('floatHealthIndicator');
+            const financialCard = document.getElementById('liveFinancialCard');
+            const cardGlow = document.getElementById('financialCardGlow');
+            
             if (floatIndicator) {
                 const bal = currentInventory.totalBalance;
                 if (bal > 50000) {
                     floatIndicator.className = "px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center space-x-1";
                     floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Online</span>`;
+                    if (financialCard) financialCard.style.borderColor = "rgba(16, 185, 129, 0.2)";
+                    if (cardGlow) cardGlow.className = "absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none transition-all duration-300";
                 } else if (bal >= 15000 && bal <= 50000) {
                     floatIndicator.className = "px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold flex items-center space-x-1";
                     floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span>Warning</span>`;
+                    if (financialCard) financialCard.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                    if (cardGlow) cardGlow.className = "absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none transition-all duration-300";
                 } else {
                     floatIndicator.className = "px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold flex items-center space-x-1";
                     floatIndicator.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span><span>Critical</span>`;
+                    if (financialCard) financialCard.style.borderColor = "rgba(244, 63, 94, 0.3)";
+                    if (cardGlow) cardGlow.className = "absolute -right-10 -top-10 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl pointer-events-none transition-all duration-300";
                 }
             }
 
@@ -277,7 +289,8 @@ async function fetchDashboardMetrics() {
             checkLowStockAlerts();
 
             if (data.recentHistory) {
-                renderRecentHistory(data.recentHistory);
+                allRecentHistoryLogs = data.recentHistory;
+                renderRecentHistory(allRecentHistoryLogs);
             }
         }
     } catch (err) {
@@ -285,16 +298,40 @@ async function fetchDashboardMetrics() {
     }
 }
 
+function filterTransactions(type) {
+    currentTransactionFilter = type;
+    ['All', 'Withdrawal', 'Cash Reload', 'Balance Inquiry'].forEach(t => {
+        const btn = document.getElementById(`filterBtn-${t}`);
+        if (btn) {
+            if (t === type) {
+                btn.className = "px-3 py-1 rounded-lg font-semibold bg-emerald-600 text-white transition whitespace-nowrap";
+            } else {
+                btn.className = "px-3 py-1 rounded-lg font-semibold bg-slate-800/80 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap";
+            }
+        }
+    });
+    renderRecentHistory(allRecentHistoryLogs);
+}
+
 function renderRecentHistory(logs) {
     const feed = document.getElementById('historyFeed');
     if (!feed) return;
 
-    if (!logs || logs.length === 0) {
-        feed.innerHTML = `<div class="text-center text-xs text-slate-500 py-3">No recent transactions logged yet.</div>`;
+    let filtered = logs;
+    if (currentTransactionFilter !== 'All') {
+        if (currentTransactionFilter === 'Cash Reload') {
+            filtered = logs.filter(tx => tx.type === 'Cash Reload' || tx.type === 'Owner Capital Injection' || tx.type === 'Settlement Received');
+        } else {
+            filtered = logs.filter(tx => tx.type === currentTransactionFilter);
+        }
+    }
+
+    if (!filtered || filtered.length === 0) {
+        feed.innerHTML = `<div class="text-center text-xs text-slate-500 py-3">No matching transactions found.</div>`;
         return;
     }
 
-    feed.innerHTML = logs.map(tx => {
+    feed.innerHTML = filtered.map(tx => {
         const isReload = tx.type === 'Cash Reload' || tx.type === 'Owner Capital Injection' || tx.type === 'Settlement Received';
         const isBalance = tx.type === 'Balance Inquiry';
         const color = isReload ? 'text-emerald-400' : isBalance ? 'text-indigo-400' : 'text-amber-400';

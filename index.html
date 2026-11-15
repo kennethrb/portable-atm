@@ -38,6 +38,71 @@
             </button>
         </div>
 
+        <!-- NEW BUSINESS PERFORMANCE DASHBOARD SECTION -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between px-2">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Business Performance</h2>
+                <span class="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded">Owner View</span>
+            </div>
+
+            <!-- KPI Cards Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- KPI #1: Expected Next Commission PayOut -->
+                <div class="bank-card rounded-2xl p-4 space-y-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase block">Expected Next Payout</span>
+                    <h3 id="kpiExpectedPayout" class="text-2xl font-extrabold text-amber-400 tracking-tight">₱0.00</h3>
+                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80 space-y-0.5">
+                        <span id="kpiCoverage" class="block">Coverage: --</span>
+                        <span id="kpiPayDate" class="block text-slate-300 font-semibold">Pay Date: --</span>
+                    </div>
+                </div>
+
+                <!-- KPI #2: Commission Transactions -->
+                <div class="bank-card rounded-2xl p-4 space-y-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase block">Commission Txns</span>
+                    <h3 id="kpiTotalTxns" class="text-2xl font-extrabold text-white tracking-tight">0 Total</h3>
+                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80 space-y-0.5">
+                        <span id="kpiWithdrawalsCount" class="block">0 Withdrawals</span>
+                        <span id="kpiInquiriesCount" class="block">0 Inquiries</span>
+                    </div>
+                </div>
+
+                <!-- KPI #3: Daily Average Transactions -->
+                <div class="bank-card rounded-2xl p-4 space-y-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase block">Daily Average</span>
+                    <div class="flex items-baseline space-x-1.5">
+                        <h3 id="kpiDailyAvg" class="text-2xl font-extrabold text-sky-400 tracking-tight">0.0</h3>
+                        <span class="text-xs text-slate-400">/ Day</span>
+                    </div>
+                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
+                        Rating: <span id="kpiDailyRating" class="font-bold text-slate-200">--</span>
+                    </div>
+                </div>
+
+                <!-- KPI #4: ATM Health Score -->
+                <div class="bank-card rounded-2xl p-4 space-y-1">
+                    <span class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase block">ATM Health Score</span>
+                    <div class="flex items-baseline space-x-1.5">
+                        <h3 id="kpiHealthScore" class="text-2xl font-extrabold text-emerald-400 tracking-tight">0/100</h3>
+                    </div>
+                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
+                        Status: <span id="kpiHealthRating" class="font-bold text-emerald-300">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Owner Insight Engine Panel -->
+            <div class="bank-card rounded-2xl p-4 space-y-2 border border-emerald-500/20 bg-gradient-to-r from-emerald-950/20 to-slate-900/60">
+                <div class="flex items-center space-x-2">
+                    <span class="text-base">💡</span>
+                    <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Owner Insight Engine</h4>
+                </div>
+                <p id="ownerInsightText" class="text-xs text-slate-300 leading-relaxed">
+                    Analyzing location performance and operational bottlenecks...
+                </p>
+            </div>
+        </div>
+
         <!-- Live Financial Summary Card -->
         <div class="bank-card rounded-2xl p-6 relative overflow-hidden space-y-4">
             <div class="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>

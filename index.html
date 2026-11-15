@@ -38,7 +38,7 @@
             </button>
         </div>
 
-        <!-- NEW BUSINESS PERFORMANCE DASHBOARD SECTION -->
+        <!-- BUSINESS PERFORMANCE DASHBOARD SECTION -->
         <div class="space-y-4">
             <div class="flex items-center justify-between px-2">
                 <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Business Performance</h2>
@@ -87,6 +87,27 @@
                     </div>
                     <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
                         Status: <span id="kpiHealthRating" class="font-bold text-emerald-300">--</span>
+                    </div>
+                </div>
+
+                <!-- NEW KPI #5: Commission Trend -->
+                <div class="bank-card rounded-2xl p-4 col-span-2 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Commission Trend</span>
+                        <div class="text-xs font-bold">
+                            <span class="text-slate-400 font-normal">Growth: </span>
+                            <span id="kpiCommissionGrowth" class="text-emerald-400">N/A</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 pt-1.5 border-t border-slate-800/80">
+                        <div>
+                            <span id="kpiPrevCycleLabel" class="text-[10px] text-slate-400 block">Previous Cycle</span>
+                            <span id="kpiPrevCycleAmount" class="text-base font-bold text-slate-300">₱0</span>
+                        </div>
+                        <div>
+                            <span id="kpiCurrCycleLabel" class="text-[10px] text-slate-400 block">Current Cycle</span>
+                            <span id="kpiCurrCycleAmount" class="text-base font-extrabold text-white">₱0</span>
+                        </div>
                     </div>
                 </div>
             </div>

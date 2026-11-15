@@ -125,8 +125,8 @@
         </div>
 
         <!-- Live Financial Summary Card -->
-        <div class="bank-card rounded-2xl p-6 relative overflow-hidden space-y-4">
-            <div class="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div id="liveFinancialCard" class="bank-card rounded-2xl p-6 relative overflow-hidden space-y-4 transition-colors duration-300">
+            <div id="financialCardGlow" class="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none transition-all duration-300"></div>
 
             <div class="flex justify-between items-start">
                 <div>
@@ -329,11 +329,20 @@
         </div>
 
         <!-- Recent Transactions Log Feed Card -->
-        <div class="bank-card rounded-2xl p-6">
-            <div class="flex items-center justify-between mb-4">
+        <div class="bank-card rounded-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
                 <h3 class="font-bold text-white text-base">Recent Transactions</h3>
-                <span class="text-[11px] text-slate-400">Last 5 Logs</span>
+                <span class="text-[11px] text-slate-400">Activity Log</span>
             </div>
+            
+            <!-- Transaction Type Filter Bar -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                <button type="button" onclick="filterTransactions('All')" id="filterBtn-All" class="px-3 py-1 rounded-lg font-semibold bg-emerald-600 text-white transition whitespace-nowrap">All</button>
+                <button type="button" onclick="filterTransactions('Withdrawal')" id="filterBtn-Withdrawal" class="px-3 py-1 rounded-lg font-semibold bg-slate-800/80 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">Withdrawals</button>
+                <button type="button" onclick="filterTransactions('Cash Reload')" id="filterBtn-Cash Reload" class="px-3 py-1 rounded-lg font-semibold bg-slate-800/80 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">Reloads</button>
+                <button type="button" onclick="filterTransactions('Balance Inquiry')" id="filterBtn-Balance Inquiry" class="px-3 py-1 rounded-lg font-semibold bg-slate-800/80 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">Inquiries</button>
+            </div>
+
             <div id="historyFeed" class="space-y-2.5">
                 <div class="text-center text-xs text-slate-500 py-3">Loading history...</div>
             </div>

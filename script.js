@@ -2,6 +2,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-OAfp8qXmXQKIKpuMy
 
 let currentInventory = { p100: 0, p500: 0, p1000: 0, totalBalance: 0 };
 let adaptivePatternData = { p100Percent: 15, p500Percent: 20, p1000Percent: 65, mostUsed: "₱1,000", fastestDepleting: "₱500" };
+let statusTimeout = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     const dateField = document.getElementById('date');
@@ -66,6 +67,29 @@ document.addEventListener("DOMContentLoaded", () => {
         navigator.serviceWorker.register('./sw.js').catch((err) => console.log('SW registration failed:', err));
     }
 });
+
+function showStatus(message, isError = false) {
+    const status = document.getElementById('statusMessage');
+    if (!status) return;
+
+    if (statusTimeout) {
+        clearTimeout(statusTimeout);
+        statusTimeout = null;
+    }
+
+    status.innerText = message;
+    if (isError) {
+        status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl transition-opacity duration-300";
+    } else {
+        status.className = "mt-4 text-center text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 p-3 rounded-xl transition-opacity duration-300";
+    }
+    status.classList.remove('hidden');
+
+    statusTimeout = setTimeout(() => {
+        status.classList.add('hidden');
+        statusTimeout = null;
+    }, 4500);
+}
 
 function setQuickAmount(val) {
     const amountField = document.getElementById('amount');
@@ -227,21 +251,12 @@ async function fetchDashboardMetrics() {
 
             setSafeText('dashTodayWithdrawals', '₱' + Number(m.todayWithdrawals || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
             setSafeText('dashPendingSettlement', '₱' + Number(m.pendingSettlement || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
-            
-            setSafeText('dashCommissionReceivable', '₱' + Number(m.commissionReceivable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
-            setSafeText('dashCommissionCoverage', `Coverage: ${m.previousMonthName || 'Previous Month'}`);
-            setSafeText('dashCommissionPayBy', `Expected Payout: ${m.expectedPayoutDate || '15th of Current Month'}`);
-
             setSafeText('dashSettlementFunds', '₱' + Number(m.settlementFundsAvailable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
 
             setSafeText('pattern100', adaptivePatternData.p100Percent + '%');
             setSafeText('pattern500', adaptivePatternData.p500Percent + '%');
             setSafeText('pattern1000', adaptivePatternData.p1000Percent + '%');
             setSafeText('patternMostUsed', adaptivePatternData.mostUsed);
-
-            setSafeText('healthMostConsumed', adaptivePatternData.mostUsed);
-            setSafeText('healthFastestDepleting', adaptivePatternData.fastestDepleting);
-            setSafeText('healthRecommendedReload', '₱' + Math.max(20000, Math.round((m.todayWithdrawals || 5000) * 2)).toLocaleString('en-US'));
 
             const settlementIndicator = document.getElementById('settlementStatusIndicator');
             const pendingVal = parseFloat(m.pendingSettlement) || 0;
@@ -449,17 +464,12 @@ if (atmForm) {
     atmForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const btn = document.getElementById('submitBtn');
-        const status = document.getElementById('statusMessage');
 
         const type = document.getElementById('type').value;
         let rawAmount = parseFloat(document.getElementById('amount').value) || 0;
 
         if (type === 'Withdrawal' && rawAmount > 10000) {
-            if (status) {
-                status.innerText = "❌ Policy Violation: Maximum withdrawal per transaction is ₱10,000.";
-                status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl";
-                status.classList.remove('hidden');
-            }
+            showStatus("❌ Policy Violation: Maximum withdrawal per transaction is ₱10,000.", true);
             return;
         }
 
@@ -470,11 +480,7 @@ if (atmForm) {
             const calculatedDenomTotal = (b100Count * 100) + (b500Count * 500) + (b1000Count * 1000);
 
             if (calculatedDenomTotal > 0 && calculatedDenomTotal !== rawAmount) {
-                if (status) {
-                    status.innerText = `❌ Mismatch: Bills total (₱${calculatedDenomTotal.toLocaleString()}) does not match Amount (₱${rawAmount.toLocaleString()})`;
-                    status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl";
-                    status.classList.remove('hidden');
-                }
+                showStatus(`❌ Mismatch: Bills total (₱${calculatedDenomTotal.toLocaleString()}) does not match Amount (₱${rawAmount.toLocaleString()})`, true);
                 return;
             }
         }
@@ -483,7 +489,6 @@ if (atmForm) {
             btn.disabled = true;
             btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...`;
         }
-        if (status) status.classList.add('hidden');
 
         let amount = rawAmount;
         if (type === 'Withdrawal' && amount > 0) amount = -amount;
@@ -517,11 +522,7 @@ if (atmForm) {
             const result = await res.json();
 
             if (result.status === 'success') {
-                if (status) {
-                    status.innerText = "✅ Transaction successfully recorded!";
-                    status.className = "mt-4 text-center text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 p-3 rounded-xl";
-                    status.classList.remove('hidden');
-                }
+                showStatus("✅ Transaction successfully recorded!", false);
                 atmForm.reset();
                 const dateField = document.getElementById('date');
                 if (dateField) dateField.valueAsDate = new Date();
@@ -530,18 +531,10 @@ if (atmForm) {
                 updateFeeCalculator();
                 setTimeout(fetchDashboardMetrics, 1200);
             } else {
-                if (status) {
-                    status.innerText = "❌ Server Error: " + (result.message || "Failed to record.");
-                    status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl";
-                    status.classList.remove('hidden');
-                }
+                showStatus("❌ Server Error: " + (result.message || "Failed to record."), true);
             }
         } catch (err) {
-            if (status) {
-                status.innerText = "❌ Network error. Transaction was not confirmed.";
-                status.className = "mt-4 text-center text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/50 p-3 rounded-xl";
-                status.classList.remove('hidden');
-            }
+            showStatus("❌ Network error. Transaction was not confirmed.", true);
         } finally {
             if (btn) {
                 btn.disabled = false;

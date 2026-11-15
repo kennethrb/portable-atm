@@ -158,7 +158,7 @@ async function fetchDashboardMetrics() {
                 if (el) el.innerText = text;
             };
 
-            // Populate Business Performance KPIs & Owner Insights
+            // Business Performance KPIs & Owner Insights
             setSafeText('kpiExpectedPayout', '₱' + Number(m.expectedNextCommissionPayout || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
             setSafeText('kpiCoverage', `Coverage: ${m.previousMonthName || '--'}`);
             setSafeText('kpiPayDate', `Pay Date: ${m.expectedPayoutDate || '--'}`);
@@ -180,6 +180,32 @@ async function fetchDashboardMetrics() {
             setSafeText('kpiHealthScore', `${m.healthScore || 0}/100`);
             setSafeText('kpiHealthRating', m.healthRating || 'Poor');
             setSafeText('ownerInsightText', m.ownerInsight || 'No insights available.');
+
+            // Commission Trend Card
+            setSafeText('kpiPrevCycleLabel', `${m.twoMonthsAgoShortName || 'Previous'} Commission`);
+            setSafeText('kpiPrevCycleAmount', '₱' + Number(m.previousCycleCommission || 0).toLocaleString('en-US'));
+            setSafeText('kpiCurrCycleLabel', `${m.previousMonthShortName || 'Current'} Commission`);
+            setSafeText('kpiCurrCycleAmount', '₱' + Number(m.currentCycleCommission || 0).toLocaleString('en-US'));
+
+            const growthEl = document.getElementById('kpiCommissionGrowth');
+            if (growthEl) {
+                if (m.commissionGrowthPercent === null || m.commissionGrowthPercent === undefined) {
+                    growthEl.innerText = 'N/A';
+                    growthEl.className = 'text-slate-400';
+                } else {
+                    const roundedGrowth = Math.round(m.commissionGrowthPercent);
+                    if (roundedGrowth > 0) {
+                        growthEl.innerText = `+${roundedGrowth}%`;
+                        growthEl.className = 'text-emerald-400';
+                    } else if (roundedGrowth < 0) {
+                        growthEl.innerText = `${roundedGrowth}%`;
+                        growthEl.className = 'text-rose-400';
+                    } else {
+                        growthEl.innerText = '0%';
+                        growthEl.className = 'text-slate-300';
+                    }
+                }
+            }
 
             // Existing Dashboard Elements
             setSafeText('dashBalance', '₱' + currentInventory.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 }));

@@ -158,6 +158,30 @@ async function fetchDashboardMetrics() {
                 if (el) el.innerText = text;
             };
 
+            // Populate Business Performance KPIs & Owner Insights
+            setSafeText('kpiExpectedPayout', '₱' + Number(m.expectedNextCommissionPayout || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
+            setSafeText('kpiCoverage', `Coverage: ${m.previousMonthName || '--'}`);
+            setSafeText('kpiPayDate', `Pay Date: ${m.expectedPayoutDate || '--'}`);
+            
+            setSafeText('kpiTotalTxns', `${m.totalCommissionTransactions || 0} Total`);
+            setSafeText('kpiWithdrawalsCount', `${m.withdrawalCountPreviousMonth || 0} Withdrawals`);
+            setSafeText('kpiInquiriesCount', `${m.balanceInquiryCountPreviousMonth || 0} Inquiries`);
+
+            const dailyAvg = m.dailyAverageTransactions || 0;
+            setSafeText('kpiDailyAvg', dailyAvg.toFixed(1));
+            
+            let dailyRating = "Poor";
+            if (dailyAvg >= 5) dailyRating = "Excellent";
+            else if (dailyAvg >= 3) dailyRating = "Good";
+            else if (dailyAvg >= 1) dailyRating = "Fair";
+            else dailyRating = "Poor";
+            setSafeText('kpiDailyRating', dailyRating);
+
+            setSafeText('kpiHealthScore', `${m.healthScore || 0}/100`);
+            setSafeText('kpiHealthRating', m.healthRating || 'Poor');
+            setSafeText('ownerInsightText', m.ownerInsight || 'No insights available.');
+
+            // Existing Dashboard Elements
             setSafeText('dashBalance', '₱' + currentInventory.totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2 }));
             
             const floatIndicator = document.getElementById('floatHealthIndicator');
